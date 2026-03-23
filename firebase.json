@@ -1,0 +1,50 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "qrbasedwebassistedattendances",
+          "appId": "1:718827611886:android:5ede9a40356106295af5ff",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "qrbasedwebassistedattendances",
+          "configurations": {
+            "web": "1:718827611886:web:7761cdd8753745485af5ff"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "database": "(default)",
+    "location": "nam5",
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "hosting": {
+    "site": "classscan",
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  },
+  "auth": {
+    "providers": {
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "QR Code Attendance System",
+        "supportEmail": "danryuzaki00@gmail.com"
+      }
+    }
+  }
+}
