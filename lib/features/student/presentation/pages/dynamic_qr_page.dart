@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:toastification/toastification.dart';
 import '../../logic/profile_controller.dart';
 import '../../../../core/controllers/dynamicsize_controller.dart';
 
@@ -17,6 +18,40 @@ class _StudentQrPageState extends State<StudentQrPage> {
   void dispose() {
     controller.dispose();
     super.dispose();
+  }
+
+  Future<void> _refreshWithToast() async {
+    await controller.refreshLocationAndQr();
+    if (!mounted) return;
+    final hasLocation = controller.locationStatus == true;
+    toastification.show(
+      context: context,
+      title: Text(
+        hasLocation ? 'QR Regenerated' : 'Location Unavailable',
+        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+      ),
+      description: Text(
+        hasLocation
+            ? 'Your QR code now includes your location.'
+            : 'Could not get location. QR generated without coordinates.',
+        style: const TextStyle(fontSize: 12),
+      ),
+      icon: HugeIcon(
+        icon: hasLocation
+            ? HugeIcons.strokeRoundedCheckmarkCircle02
+            : HugeIcons.strokeRoundedLocation01,
+        color: hasLocation ? const Color(0xFF558B2F) : const Color(0xFFF57F17),
+        size: 20,
+      ),
+      style: ToastificationStyle.flatColored,
+      type: hasLocation
+          ? ToastificationType.success
+          : ToastificationType.warning,
+      autoCloseDuration: const Duration(seconds: 4),
+      alignment: Alignment.bottomRight,
+      borderRadius: BorderRadius.circular(10),
+      showProgressBar: true,
+    );
   }
 
   @override
@@ -229,9 +264,68 @@ class _StudentQrPageState extends State<StudentQrPage> {
                               ),
                             ),
                           ),
+                          const SizedBox(height: 8),
+                          _LocationStatusChip(
+                            status: controller.locationStatus,
+                            fetching: controller.locationFetching,
+                          ),
                           const SizedBox(height: 16),
                         ],
                       ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  GestureDetector(
+                    onTap: controller.locationFetching
+                        ? null
+                        : _refreshWithToast,
+                    child: MouseRegion(
+                      cursor: controller.locationFetching
+                          ? SystemMouseCursors.basic
+                          : SystemMouseCursors.click,
+                      child: AnimatedOpacity(
+                        duration: const Duration(milliseconds: 150),
+                        opacity: controller.locationFetching ? 0.5 : 1.0,
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF5F5F5),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFFE0E0E0)),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              controller.locationFetching
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Color(0xFF5A8A00),
+                                      ),
+                                    )
+                                  : HugeIcon(
+                                      icon: HugeIcons.strokeRoundedLocation01,
+                                      color: const Color(0xFF5A8A00),
+                                      size: 16,
+                                    ),
+                              const SizedBox(width: 8),
+                              Text(
+                                controller.locationFetching
+                                    ? 'Getting location...'
+                                    : 'Regenerate with Location',
+                                style: const TextStyle(
+                                  color: Color(0xFF5A8A00),
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -280,6 +374,16 @@ class _StudentQrPageState extends State<StudentQrPage> {
                             height: 1.6,
                           ),
                         ),
+                        const Text(
+                          '• Some classes require location-based validation. '
+                          'Tap "Regenerate with Location" to embed your GPS '
+                          'coordinates before scanning at the kiosk.',
+                          style: TextStyle(
+                            color: Color(0xFF5D4037),
+                            fontSize: 12,
+                            height: 1.6,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -289,6 +393,72 @@ class _StudentQrPageState extends State<StudentQrPage> {
           ),
         );
       },
+    );
+  }
+}
+
+class _LocationStatusChip extends StatelessWidget {
+  final bool? status;
+  final bool fetching;
+  const _LocationStatusChip({required this.status, required this.fetching});
+  @override
+  Widget build(BuildContext context) {
+    if (fetching) {
+      return _chip(
+        icon: Icons.location_searching_rounded,
+        label: 'Getting location...',
+        bg: const Color(0xFFFFF8E1),
+        border: const Color(0xFFFFE082),
+        textColor: const Color(0xFFF57F17),
+      );
+    }
+    if (status == true) {
+      return _chip(
+        icon: Icons.location_on_rounded,
+        label: 'Location embedded in QR',
+        bg: const Color(0xFFF1F8E9),
+        border: const Color(0xFFC5E1A5),
+        textColor: const Color(0xFF558B2F),
+      );
+    }
+    return _chip(
+      icon: Icons.location_off_rounded,
+      label: 'No location — QR without coordinates',
+      bg: const Color(0xFFF5F5F5),
+      border: const Color(0xFFE0E0E0),
+      textColor: Colors.black45,
+    );
+  }
+
+  Widget _chip({
+    required IconData icon,
+    required String label,
+    required Color bg,
+    required Color border,
+    required Color textColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: textColor, size: 13),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              color: textColor,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

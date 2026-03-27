@@ -6,10 +6,14 @@ class AttendanceSettings {
   final int onTimeMinutes;
   final int scanCooldownSeconds;
   final int timeOutMinimumMinutes;
+  final bool locationValidation;
+  final int proximityThreshold;
   const AttendanceSettings({
     this.onTimeMinutes = 15,
     this.scanCooldownSeconds = 10,
     this.timeOutMinimumMinutes = 5,
+    this.locationValidation = false,
+    this.proximityThreshold = 200,
   });
   factory AttendanceSettings.fromMap(Map<String, dynamic> map) {
     return AttendanceSettings(
@@ -17,12 +21,16 @@ class AttendanceSettings {
       scanCooldownSeconds: (map['scanCooldownSeconds'] as num?)?.toInt() ?? 10,
       timeOutMinimumMinutes:
           (map['timeOutMinimumMinutes'] as num?)?.toInt() ?? 5,
+      locationValidation: (map['locationValidation'] as bool?) ?? false,
+      proximityThreshold: (map['proximityThreshold'] as num?)?.toInt() ?? 200,
     );
   }
   Map<String, dynamic> toMap() => {
     'onTimeMinutes': onTimeMinutes,
     'scanCooldownSeconds': scanCooldownSeconds,
     'timeOutMinimumMinutes': timeOutMinimumMinutes,
+    'locationValidation': locationValidation,
+    'proximityThreshold': proximityThreshold,
   };
   String computeStatus(DateTime? timeIn, DateTime sessionStartTime) {
     if (timeIn == null) return 'Absent';
@@ -410,6 +418,8 @@ class ClassesController extends ChangeNotifier {
     required int onTimeMinutes,
     required int scanCooldownSeconds,
     required int timeOutMinimumMinutes,
+    required bool locationValidation,
+    required int proximityThreshold,
   }) async {
     if (onTimeMinutes < 0) return 'On-time minutes cannot be negative.';
     if (scanCooldownSeconds < 1) {
@@ -418,12 +428,17 @@ class ClassesController extends ChangeNotifier {
     if (timeOutMinimumMinutes < 1) {
       return 'Time-out minimum must be at least 1 minute.';
     }
+    if (proximityThreshold < 10) {
+      return 'Proximity threshold must be at least 10 meters.';
+    }
     try {
       await _db.collection('classes').doc(classId).update({
         'attendanceSettings': AttendanceSettings(
           onTimeMinutes: onTimeMinutes,
           scanCooldownSeconds: scanCooldownSeconds,
           timeOutMinimumMinutes: timeOutMinimumMinutes,
+          locationValidation: locationValidation,
+          proximityThreshold: proximityThreshold,
         ).toMap(),
       });
       await loadClasses();

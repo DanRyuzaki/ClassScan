@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -28,12 +29,42 @@ class SettingsController extends ChangeNotifier {
     ].where((s) => s.trim().isNotEmpty).join(' ');
   }
 
-  String get qrPayload => 'CLASSSCAN|$uid';
+  String _qrToken = '';
+  String get qrToken => _qrToken;
+  bool get hasQrToken => _qrToken.isNotEmpty;
+  String get qrPayload => hasQrToken ? 'CLASSSCAN|$uid|$_qrToken' : '';
   bool _qrVisible = false;
   bool get qrVisible => _qrVisible;
+  bool _regenerating = false;
+  bool get regenerating => _regenerating;
   void toggleQrVisibility() {
     _qrVisible = !_qrVisible;
     notifyListeners();
+  }
+
+  String _generateQrToken() {
+    const chars =
+        'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    final rand = Random.secure();
+    return List.generate(32, (_) => chars[rand.nextInt(chars.length)]).join();
+  }
+
+  Future<String?> regenerateQrToken() async {
+    _regenerating = true;
+    notifyListeners();
+    try {
+      final newToken = _generateQrToken();
+      await _db.collection('users').doc(uid).update({'qrToken': newToken});
+      _qrToken = newToken;
+      _regenerating = false;
+      notifyListeners();
+      return null;
+    } catch (e) {
+      debugPrint('regenerateQrToken error: $e');
+      _regenerating = false;
+      notifyListeners();
+      return 'Failed to regenerate QR. Check your connection.';
+    }
   }
 
   SettingsStatus _status = SettingsStatus.idle;
@@ -83,6 +114,16 @@ class SettingsController extends ChangeNotifier {
         _email = data['email'] ?? user.email ?? '';
         _role = data['role'] ?? 'teacher';
         _emoji = data['emoji'] ?? '🧑‍🏫';
+        final storedToken = data['qrToken'] as String?;
+        if (storedToken != null && storedToken.isNotEmpty) {
+          _qrToken = storedToken;
+        } else {
+          final generated = _generateQrToken();
+          await _db.collection('users').doc(user.uid).update({
+            'qrToken': generated,
+          });
+          _qrToken = generated;
+        }
       } else {
         _email = user.email ?? '';
         _firstName = user.displayName ?? '';
@@ -132,4 +173,3 @@ class SettingsController extends ChangeNotifier {
     loadProfile();
   }
 }
-//

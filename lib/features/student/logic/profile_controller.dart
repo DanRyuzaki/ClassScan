@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 
 enum ProfileStatus { idle, loading, success, error }
 
@@ -28,8 +29,42 @@ class StudentProfileController extends ChangeNotifier {
 
   bool _qrVisible = false;
   bool get qrVisible => _qrVisible;
+  String? _locationPayload;
+  bool _locationFetching = false;
+  bool get locationFetching => _locationFetching;
+  bool? get locationStatus =>
+      _locationPayload != null ? true : (_locationFetching ? null : false);
   void toggleQr() {
     _qrVisible = !_qrVisible;
+    notifyListeners();
+  }
+
+  Future<bool> refreshLocationAndQr() async {
+    _locationFetching = true;
+    _locationPayload = null;
+    notifyListeners();
+    await _fetchLocation();
+    _locationFetching = false;
+    notifyListeners();
+    return _locationPayload != null;
+  }
+
+  Future<void> _fetchLocation() async {
+    try {
+      final permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        await Geolocator.requestPermission();
+      }
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
+      ).timeout(const Duration(seconds: 8));
+      _locationPayload =
+          '${pos.latitude.toStringAsFixed(6)},${pos.longitude.toStringAsFixed(6)}';
+    } catch (_) {
+      _locationPayload = null;
+    }
     notifyListeners();
   }
 
@@ -40,7 +75,12 @@ class StudentProfileController extends ChangeNotifier {
         '${now.day.toString().padLeft(2, '0')}';
   }
 
-  String get qrPayload => 'CLASSSCAN|$uid|$_todayDate';
+  String get qrPayload {
+    final base = 'CLASSSCAN|$uid|$_todayDate';
+    if (_locationPayload != null) return '$base|$_locationPayload';
+    return base;
+  }
+
   String get todayDateDisplay => _todayDate;
   ProfileStatus _status = ProfileStatus.idle;
   ProfileStatus get status => _status;

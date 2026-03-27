@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 enum SessionStatus { notStarted, running, ended }
@@ -102,6 +104,16 @@ class KioskController extends ChangeNotifier {
   int _onTimeMinutes = 15;
   int _scanCooldownSeconds = 10;
   int _timeOutMinimumSeconds = 300;
+  bool _locationValidation = false;
+  int _proximityThreshold = 200;
+  double? _kioskLat;
+  double? _kioskLng;
+  bool _kioskLocationWarning = false;
+  bool get kioskLocationWarning => _kioskLocationWarning;
+  void clearKioskLocationWarning() {
+    _kioskLocationWarning = false;
+  }
+
   bool _remotelyEnded = false;
   bool get remotelyEnded => _remotelyEnded;
   void clearRemotelyEnded() {
@@ -206,17 +218,20 @@ class KioskController extends ChangeNotifier {
     }
     final uid = parts[1];
     if (parts.length >= 3) {
-      final qrDate = parts[2];
-      final today = _formatDateForQr(localNow);
-      if (qrDate != today) {
-        showToast(
-          KioskToast(
-            title: 'Expired QR Code',
-            message: 'This QR is not valid for today.',
-            isError: true,
-          ),
-        );
-        return;
+      final segment = parts[2];
+      final isDate = RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(segment);
+      if (isDate) {
+        final today = _formatDateForQr(localNow);
+        if (segment != today) {
+          showToast(
+            KioskToast(
+              title: 'Expired QR Code',
+              message: 'This QR is not valid for today.',
+              isError: true,
+            ),
+          );
+          return;
+        }
       }
     }
     try {
@@ -233,9 +248,9 @@ class KioskController extends ChangeNotifier {
       }
       final user = KioskUser.fromDoc(uid, doc.data()!);
       if (user.role == 'teacher') {
-        await _handleTeacherScan(user);
+        await _handleTeacherScan(user, parts);
       } else if (user.role == 'student') {
-        await _handleStudentScan(user);
+        await _handleStudentScan(user, parts);
       } else {
         showToast(
           KioskToast(
@@ -257,7 +272,7 @@ class KioskController extends ChangeNotifier {
     }
   }
 
-  Future<void> _handleTeacherScan(KioskUser teacher) async {
+  Future<void> _handleTeacherScan(KioskUser teacher, List<String> parts) async {
     if (_classTeacherId == null) {
       showToast(
         KioskToast(
@@ -278,6 +293,37 @@ class KioskController extends ChangeNotifier {
       );
       return;
     }
+    if (parts.length >= 3) {
+      final segment = parts[2];
+      final isDate = RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(segment);
+      if (!isDate) {
+        try {
+          final userDoc = await _db.collection('users').doc(teacher.uid).get();
+          final storedToken = userDoc.data()?['qrToken'] as String?;
+          if (storedToken == null || storedToken != segment) {
+            showToast(
+              KioskToast(
+                title: 'Invalid QR Code',
+                message:
+                    'This QR code is no longer valid. '
+                    'Please use your latest QR from Settings.',
+                isError: true,
+              ),
+            );
+            return;
+          }
+        } catch (e) {
+          showToast(
+            KioskToast(
+              title: 'Verification Failed',
+              message: 'Could not verify teacher QR. Check connection.',
+              isError: true,
+            ),
+          );
+          return;
+        }
+      }
+    }
     _teacherName = teacher.fullName;
     if (_activeSessionId != null) {
       await _db.collection('sessions').doc(_activeSessionId).update({
@@ -296,8 +342,54 @@ class KioskController extends ChangeNotifier {
   }
 
   final Set<String> _processingUIDs = {};
-  Future<void> _handleStudentScan(KioskUser student) async {
+  Future<void> _handleStudentScan(KioskUser student, List<String> parts) async {
     if (_activeSessionId == null) return;
+    if (_locationValidation && _kioskLat != null) {
+      if (parts.length < 4 || parts[3].isEmpty) {
+        showToast(
+          KioskToast(
+            title: 'Location Required',
+            message:
+                'This class requires location validation. '
+                'Please allow location access and regenerate your QR.',
+            isError: true,
+          ),
+        );
+        return;
+      }
+      final locParts = parts[3].split(',');
+      if (locParts.length == 2) {
+        final studentLat = double.tryParse(locParts[0]);
+        final studentLng = double.tryParse(locParts[1]);
+        if (studentLat == null || studentLng == null) {
+          showToast(
+            KioskToast(
+              title: 'Invalid Location',
+              message: 'Could not read location data from QR code.',
+              isError: true,
+            ),
+          );
+          return;
+        }
+        final distance = _haversineDistance(
+          _kioskLat!,
+          _kioskLng!,
+          studentLat,
+          studentLng,
+        );
+        if (distance > _proximityThreshold) {
+          showToast(
+            KioskToast(
+              title: 'Too Far from Kiosk',
+              message:
+                  '${distance.round()}m away — limit is ${_proximityThreshold}m.',
+              isError: true,
+            ),
+          );
+          return;
+        }
+      }
+    }
     if (!_enrolledStudentUIDs.contains(student.uid)) {
       showToast(
         KioskToast(
@@ -439,6 +531,45 @@ class KioskController extends ChangeNotifier {
         '${dt.day.toString().padLeft(2, '0')}';
   }
 
+  Future<void> _fetchKioskLocation() async {
+    try {
+      final permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        await Geolocator.requestPermission();
+      }
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
+      ).timeout(const Duration(seconds: 8));
+      _kioskLat = pos.latitude;
+      _kioskLng = pos.longitude;
+    } catch (_) {
+      _kioskLat = null;
+      _kioskLng = null;
+    }
+  }
+
+  double _haversineDistance(
+    double lat1,
+    double lng1,
+    double lat2,
+    double lng2,
+  ) {
+    const r = 6371000.0;
+    final dLat = _toRad(lat2 - lat1);
+    final dLng = _toRad(lng2 - lng1);
+    final a =
+        math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(_toRad(lat1)) *
+            math.cos(_toRad(lat2)) *
+            math.sin(dLng / 2) *
+            math.sin(dLng / 2);
+    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    return r * c;
+  }
+
+  double _toRad(double deg) => deg * math.pi / 180;
   Future<void> startSession({CameraFacing? cameraFacing}) async {
     if (_classCode.trim().isEmpty) {
       showToast(
@@ -478,6 +609,16 @@ class KioskController extends ChangeNotifier {
           (settingsMap?['scanCooldownSeconds'] as num?)?.toInt() ?? 10;
       _timeOutMinimumSeconds =
           ((settingsMap?['timeOutMinimumMinutes'] as num?)?.toInt() ?? 5) * 60;
+      _locationValidation =
+          (settingsMap?['locationValidation'] as bool?) ?? false;
+      _proximityThreshold =
+          (settingsMap?['proximityThreshold'] as num?)?.toInt() ?? 200;
+      if (_locationValidation) {
+        await _fetchKioskLocation();
+        if (_kioskLat == null) {
+          _kioskLocationWarning = true;
+        }
+      }
       final openSessionSnap = await _db
           .collection('sessions')
           .where('classID', isEqualTo: _classDocId)
@@ -619,6 +760,11 @@ class KioskController extends ChangeNotifier {
       _onTimeMinutes = 15;
       _scanCooldownSeconds = 10;
       _timeOutMinimumSeconds = 300;
+      _locationValidation = false;
+      _proximityThreshold = 200;
+      _kioskLat = null;
+      _kioskLng = null;
+      _kioskLocationWarning = false;
       _remotelyEnded = false;
       _timeInLog.clear();
       _timedOutLog.clear();

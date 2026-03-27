@@ -284,6 +284,8 @@ class _ClassesPageState extends State<ClassesPage> {
     int onTimeVal = cls.attendanceSettings.onTimeMinutes;
     int cooldownVal = cls.attendanceSettings.scanCooldownSeconds;
     int timeOutMinVal = cls.attendanceSettings.timeOutMinimumMinutes;
+    bool locationVal = cls.attendanceSettings.locationValidation;
+    int proximityVal = cls.attendanceSettings.proximityThreshold;
     String? errorMsg;
     bool isSaving = false;
     showDialog(
@@ -401,6 +403,13 @@ class _ClassesPageState extends State<ClassesPage> {
                   value: timeOutMinVal,
                   onChanged: (v) => setDS(() => timeOutMinVal = v),
                 ),
+                const SizedBox(height: 20),
+                _LocationValidationToggle(
+                  value: locationVal,
+                  proximityThreshold: proximityVal,
+                  onToggle: (v) => setDS(() => locationVal = v),
+                  onProximityChanged: (v) => setDS(() => proximityVal = v),
+                ),
               ],
             ),
           ),
@@ -424,6 +433,8 @@ class _ClassesPageState extends State<ClassesPage> {
                   onTimeMinutes: onTimeVal,
                   scanCooldownSeconds: cooldownVal,
                   timeOutMinimumMinutes: timeOutMinVal,
+                  locationValidation: locationVal,
+                  proximityThreshold: proximityVal,
                 );
                 setDS(() => isSaving = false);
                 if (!ctx.mounted) return;
@@ -975,6 +986,8 @@ class _ClassDetailDialogState extends State<_ClassDetailDialog>
   late int _onTimeMinutes;
   late int _scanCooldownSeconds;
   late int _timeOutMinimumMinutes;
+  late bool _locationValidation;
+  late int _proximityThreshold;
   bool _savingSettings = false;
   String? _settingsError;
   String? _settingsSuccess;
@@ -986,6 +999,8 @@ class _ClassDetailDialogState extends State<_ClassDetailDialog>
     _scanCooldownSeconds = widget.cls.attendanceSettings.scanCooldownSeconds;
     _timeOutMinimumMinutes =
         widget.cls.attendanceSettings.timeOutMinimumMinutes;
+    _locationValidation = widget.cls.attendanceSettings.locationValidation;
+    _proximityThreshold = widget.cls.attendanceSettings.proximityThreshold;
     _loadStudents();
   }
 
@@ -1051,6 +1066,8 @@ class _ClassDetailDialogState extends State<_ClassDetailDialog>
       onTimeMinutes: _onTimeMinutes,
       scanCooldownSeconds: _scanCooldownSeconds,
       timeOutMinimumMinutes: _timeOutMinimumMinutes,
+      locationValidation: _locationValidation,
+      proximityThreshold: _proximityThreshold,
     );
     if (mounted) {
       setState(() {
@@ -1570,6 +1587,21 @@ class _ClassDetailDialogState extends State<_ClassDetailDialog>
             _settingsError = null;
           }),
         ),
+        const SizedBox(height: 20),
+        _LocationValidationToggle(
+          value: _locationValidation,
+          proximityThreshold: _proximityThreshold,
+          onToggle: (v) => setState(() {
+            _locationValidation = v;
+            _settingsSuccess = null;
+            _settingsError = null;
+          }),
+          onProximityChanged: (v) => setState(() {
+            _proximityThreshold = v;
+            _settingsSuccess = null;
+            _settingsError = null;
+          }),
+        ),
         const SizedBox(height: 24),
         Align(
           alignment: Alignment.centerRight,
@@ -1723,6 +1755,250 @@ class _MinutePicker extends StatelessWidget {
             min: 0,
             max: 120,
             divisions: 120,
+            onChanged: (v) => onChanged(v.round()),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LocationValidationToggle extends StatelessWidget {
+  final bool value;
+  final int proximityThreshold;
+  final ValueChanged<bool> onToggle;
+  final ValueChanged<int> onProximityChanged;
+  const _LocationValidationToggle({
+    required this.value,
+    required this.proximityThreshold,
+    required this.onToggle,
+    required this.onProximityChanged,
+  });
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 10,
+              height: 10,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Color(0xFFE65100),
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Text(
+                'Location Validation',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                  color: Colors.black87,
+                ),
+              ),
+            ),
+            GestureDetector(
+              onTap: () => onToggle(!value),
+              child: MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: 42,
+                  height: 24,
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: value
+                        ? const Color(0xFFE65100)
+                        : const Color(0xFFE0E0E0),
+                  ),
+                  child: AnimatedAlign(
+                    duration: const Duration(milliseconds: 200),
+                    alignment: value
+                        ? Alignment.centerRight
+                        : Alignment.centerLeft,
+                    child: Container(
+                      width: 18,
+                      height: 18,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          'Validates that students are physically near the kiosk when scanning.',
+          style: TextStyle(color: Colors.black38, fontSize: 11),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF3E0),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: const Color(0xFFE65100).withValues(alpha: 0.3),
+            ),
+          ),
+          child: const Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.warning_amber_rounded,
+                color: Color(0xFFE65100),
+                size: 14,
+              ),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'GPS accuracy varies by device. Phones average 5–20m, '
+                  'laptops on WiFi may report 50–300m of error. In areas '
+                  'with weak signal, legitimate students may be incorrectly '
+                  'rejected. Set a generous threshold if your environment '
+                  'has poor GPS coverage. This is a deterrent, not a guarantee.',
+                  style: TextStyle(
+                    color: Color(0xFFBF360C),
+                    fontSize: 11,
+                    height: 1.5,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (value) ...[
+          const SizedBox(height: 16),
+          _MeterPicker(
+            label: 'Proximity threshold',
+            sublabel:
+                'Maximum distance in meters a student can be from '
+                'the kiosk to pass validation.',
+            dotColor: const Color(0xFFE65100),
+            value: proximityThreshold,
+            onChanged: onProximityChanged,
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _MeterPicker extends StatelessWidget {
+  final String label;
+  final String sublabel;
+  final Color dotColor;
+  final int value;
+  final ValueChanged<int> onChanged;
+  const _MeterPicker({
+    required this.label,
+    required this.sublabel,
+    required this.dotColor,
+    required this.value,
+    required this.onChanged,
+  });
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: dotColor,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+                color: Colors.black87,
+              ),
+            ),
+            const Spacer(),
+            GestureDetector(
+              onTap: () => onChanged((value - 10).clamp(10, 1000)),
+              child: MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0F0F0),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Icon(
+                    Icons.remove,
+                    size: 16,
+                    color: Colors.black54,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 56,
+              child: Text(
+                '${value}m',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: dotColor,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: () => onChanged((value + 10).clamp(10, 1000)),
+              child: MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0F0F0),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Icon(Icons.add, size: 16, color: Colors.black54),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          sublabel,
+          style: const TextStyle(color: Colors.black38, fontSize: 11),
+        ),
+        const SizedBox(height: 6),
+        SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            activeTrackColor: dotColor,
+            inactiveTrackColor: dotColor.withValues(alpha: 0.15),
+            thumbColor: dotColor,
+            overlayColor: dotColor.withValues(alpha: 0.12),
+            trackHeight: 3,
+          ),
+          child: Slider(
+            value: value.toDouble(),
+            min: 10,
+            max: 1000,
+            divisions: 99,
             onChanged: (v) => onChanged(v.round()),
           ),
         ),

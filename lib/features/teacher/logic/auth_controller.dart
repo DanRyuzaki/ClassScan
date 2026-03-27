@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -88,15 +89,24 @@ class AuthController extends ChangeNotifier {
       return true;
     }
     final nameParts = _splitDisplayName(user.displayName ?? '');
+    final qrToken = _generateQrToken();
     await docRef.set({
       'firstName': nameParts['firstName'],
       'middleName': nameParts['middleName'],
       'lastName': nameParts['lastName'],
       'email': user.email ?? '',
       'role': 'teacher',
+      'qrToken': qrToken,
       'createdAt': FieldValue.serverTimestamp(),
     });
     return true;
+  }
+
+  String _generateQrToken() {
+    const chars =
+        'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    final rand = Random.secure();
+    return List.generate(32, (_) => chars[rand.nextInt(chars.length)]).join();
   }
 
   Map<String, String> _splitDisplayName(String displayName) {

@@ -19,7 +19,6 @@ class _AttendancePageState extends State<AttendancePage> {
   bool _isExporting = false;
   bool _isForceEnding = false;
   bool _isDeleting = false;
-
   double _fs(
     BuildContext context,
     double pct, {
@@ -101,8 +100,6 @@ class _AttendancePageState extends State<AttendancePage> {
     if (_isExporting) return;
     setState(() => _isExporting = true);
     final excel = Excel.createExcel();
-    // Create the named sheet first — only then can the default
-    // 'FlutterExcel' sheet be deleted (it won't delete if it's the only one).
     final sheet = excel['Attendance'];
     if (excel.sheets.containsKey('FlutterExcel')) {
       excel.delete('FlutterExcel');
@@ -563,14 +560,12 @@ class _AttendancePageState extends State<AttendancePage> {
         ),
       ),
       child: isMobile
-          // Mobile: scrollable so nothing clips
           ? SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: _sessionInfoItems(context, session, isRunning),
               ),
             )
-          // Desktop: full-width row with spacer pushing actions to the right
           : Row(
               children: [
                 ..._sessionInfoItems(context, session, isRunning, spacer: true),
@@ -586,7 +581,6 @@ class _AttendancePageState extends State<AttendancePage> {
     bool spacer = false,
   }) {
     return [
-      // Status pill
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
@@ -652,9 +646,7 @@ class _AttendancePageState extends State<AttendancePage> {
         value: session.date,
         color: Colors.black54,
       ),
-      // Push action buttons to the far right on desktop
       if (spacer) const Spacer(),
-      // Force End — only when running
       if (isRunning) ...[
         const SizedBox(width: 16),
         GestureDetector(
@@ -711,7 +703,6 @@ class _AttendancePageState extends State<AttendancePage> {
           ),
         ),
       ],
-      // Delete — always visible
       const SizedBox(width: 8),
       GestureDetector(
         onTap: _isDeleting ? null : () => _showDeleteSessionDialog(session),
@@ -783,7 +774,7 @@ class _AttendancePageState extends State<AttendancePage> {
         ),
         content: Text(
           'This will remotely end ${session.label} and stop all QR scanning '
-          'on the kiosk immediately. The kiosk will be notified in real-time.\n\n'
+          'on the kiosk immediately. The kiosk will be notified in real-time.\n'
           'Use this if the kiosk is unreachable (e.g. battery died).',
           textAlign: TextAlign.center,
           style: const TextStyle(
@@ -1218,7 +1209,6 @@ class _AttendancePageState extends State<AttendancePage> {
     final isMobile = MediaQuery.of(context).size.width < 700;
     final hPad = isMobile ? 16.0 : _w(context, 0.025);
     final vPad = isMobile ? 12.0 : _h(context, 0.016);
-
     if (isMobile) {
       return Padding(
         padding: EdgeInsets.fromLTRB(hPad, vPad, hPad, 80),
@@ -1237,8 +1227,6 @@ class _AttendancePageState extends State<AttendancePage> {
               ),
       );
     }
-
-    // Desktop: standard header + row table
     const tableMinWidth = 700.0;
     return Padding(
       padding: EdgeInsets.fromLTRB(hPad, vPad, hPad, 0),
@@ -1298,7 +1286,6 @@ class _AttendancePageState extends State<AttendancePage> {
         : row.isLate
         ? const Color(0xFFFFF3E0)
         : Colors.white;
-
     return GestureDetector(
       onTap: () => _showEditDialog(row),
       child: MouseRegion(
@@ -1313,7 +1300,6 @@ class _AttendancePageState extends State<AttendancePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Name + status badge on same row
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -1333,7 +1319,6 @@ class _AttendancePageState extends State<AttendancePage> {
                 ],
               ),
               const SizedBox(height: 8),
-              // Time In / Time Out
               Row(
                 children: [
                   _mobileCardChip(

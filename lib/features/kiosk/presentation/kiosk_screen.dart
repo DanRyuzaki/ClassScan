@@ -52,6 +52,36 @@ class _KioskScreenState extends State<KioskScreen> {
     super.dispose();
   }
 
+  void _showLocationWarningToast() {
+    toastification.show(
+      context: context,
+      title: const Text(
+        'Location Unavailable',
+        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+      ),
+      description: const Text(
+        'Kiosk location could not be determined. '
+        'Location validation is disabled for this session — '
+        'scans will not be checked for proximity.',
+        style: TextStyle(fontSize: 12),
+      ),
+      icon: const HugeIcon(
+        icon: HugeIcons.strokeRoundedLocation01,
+        color: Color(0xFFE65100),
+        size: 20,
+      ),
+      style: ToastificationStyle.flatColored,
+      type: ToastificationType.warning,
+      autoCloseDuration: const Duration(seconds: 6),
+      alignment: Alignment.bottomRight,
+      borderRadius: BorderRadius.circular(10),
+      showProgressBar: true,
+      progressBarTheme: const ProgressIndicatorThemeData(
+        color: Color(0xFFE65100),
+      ),
+    );
+  }
+
   void _showRemoteEndedBanner(BuildContext context) {
     showDialog(
       context: context,
@@ -152,6 +182,10 @@ class _KioskScreenState extends State<KioskScreen> {
           if (controller.remotelyEnded) {
             controller.clearRemotelyEnded();
             _showRemoteEndedBanner(context);
+          }
+          if (controller.kioskLocationWarning) {
+            controller.clearKioskLocationWarning();
+            _showLocationWarningToast();
           }
         });
         return Scaffold(
