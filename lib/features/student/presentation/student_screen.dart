@@ -1,9 +1,5 @@
-import 'dart:async';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:web/web.dart' as web;
 import '../logic/auth_controller.dart';
 import '../logic/profile_controller.dart';
 import 'auth_screen.dart';
@@ -24,60 +20,13 @@ class _StudentScreenState extends State<StudentScreen> {
       StudentProfileController();
   int _navIndex = 0;
   bool get _isSidebarLayout => MediaQuery.of(context).size.width >= 700;
-  StreamSubscription<DocumentSnapshot>? _sessionWatcher;
   @override
   void initState() {
     super.initState();
-    _startSessionWatcher();
-  }
-
-  void _startSessionWatcher() {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null || user.isAnonymous) return;
-    final localToken = web.window.sessionStorage.getItem(
-      'classscan_session_token',
-    );
-    if (localToken == null || localToken.isEmpty) return;
-    _sessionWatcher = FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .snapshots()
-        .listen((snap) {
-          if (!mounted) return;
-          final firestoreToken = snap.data()?['activeSessionToken'] as String?;
-          if (firestoreToken != localToken) {
-            _sessionWatcher?.cancel();
-            _forceSignOut();
-          }
-        });
-  }
-
-  Future<void> _forceSignOut() async {
-    await _authController.signOut();
-    if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (_) => const StudentAuthScreen(fromSignOut: true),
-      ),
-    );
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'You were signed in on another device. '
-            'This session has been ended.',
-          ),
-          backgroundColor: Color(0xFFE53935),
-          duration: Duration(seconds: 6),
-        ),
-      );
-    });
   }
 
   @override
   void dispose() {
-    _sessionWatcher?.cancel();
     _authController.dispose();
     _profileController.dispose();
     super.dispose();

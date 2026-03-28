@@ -1,8 +1,6 @@
-import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:web/web.dart' as web;
 
 enum StudentAuthStatus { idle, loading, success, error }
 
@@ -38,30 +36,6 @@ class StudentAuthController extends ChangeNotifier {
   }
 
   void clearMessages() => _setIdle();
-  static const _tokenKey = 'classscan_session_token';
-  String _generateToken() {
-    const chars =
-        'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    final rng = Random.secure();
-    return List.generate(32, (_) => chars[rng.nextInt(chars.length)]).join();
-  }
-
-  String? get _localToken => web.window.sessionStorage.getItem(_tokenKey);
-  void _saveLocalToken(String token) =>
-      web.window.sessionStorage.setItem(_tokenKey, token);
-  void _clearLocalToken() => web.window.sessionStorage.removeItem(_tokenKey);
-  Future<void> _writeSessionToken(String uid, String token) async {
-    await _db.collection('users').doc(uid).update({
-      'activeSessionToken': token,
-    });
-  }
-
-  Future<void> _clearSessionToken(String uid) async {
-    await _db.collection('users').doc(uid).update({
-      'activeSessionToken': FieldValue.delete(),
-    });
-  }
-
   Future<bool> signInWithGoogle() async {
     _setLoading();
     try {
@@ -82,20 +56,6 @@ class StudentAuthController extends ChangeNotifier {
         await _auth.signInAnonymously();
         return false;
       }
-      final doc = await _db.collection('users').doc(user.uid).get();
-      final existingToken = doc.data()?['activeSessionToken'] as String?;
-      if (existingToken != null && existingToken.isNotEmpty) {
-        await _auth.signOut();
-        await _auth.signInAnonymously();
-        _setError(
-          'You are already signed in on another device or browser tab. '
-          'Please sign out from the other session first.',
-        );
-        return false;
-      }
-      final token = _generateToken();
-      await _writeSessionToken(user.uid, token);
-      _saveLocalToken(token);
       _setSuccess();
       return true;
     } on FirebaseAuthException catch (e) {
@@ -159,41 +119,13 @@ class StudentAuthController extends ChangeNotifier {
     if (user == null || user.isAnonymous) return false;
     try {
       final doc = await _db.collection('users').doc(user.uid).get();
-      if (!doc.exists || doc.data()?['role'] != 'student') return false;
-      final firestoreToken = doc.data()?['activeSessionToken'] as String?;
-      final localToken = _localToken;
-      if (localToken == null || localToken.isEmpty) {
-        if (firestoreToken != null && firestoreToken.isNotEmpty) {
-          await _auth.signOut();
-          await _auth.signInAnonymously();
-          return false;
-        }
-        await _auth.signOut();
-        await _auth.signInAnonymously();
-        return false;
-      }
-      if (firestoreToken != localToken) {
-        _clearLocalToken();
-        await _auth.signOut();
-        await _auth.signInAnonymously();
-        return false;
-      }
-      return true;
+      return doc.exists && doc.data()?['role'] == 'student';
     } catch (_) {
       return false;
     }
   }
 
   Future<void> signOut() async {
-    final user = _auth.currentUser;
-    if (user != null && !user.isAnonymous) {
-      try {
-        await _clearSessionToken(user.uid);
-      } catch (e) {
-        debugPrint('clearSessionToken error: $e');
-      }
-    }
-    _clearLocalToken();
     await _auth.signOut();
     await _auth.signInAnonymously();
     notifyListeners();
