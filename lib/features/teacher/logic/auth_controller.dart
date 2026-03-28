@@ -81,12 +81,23 @@ class AuthController extends ChangeNotifier {
     final doc = await docRef.get();
     if (doc.exists) {
       final role = doc.data()?['role'];
-      if (role != 'teacher') {
+      if (role == 'student') {
         await _auth.signOut();
         _setError('This account is registered as a student, not a teacher.');
         return false;
       }
-      return true;
+      if (role == 'teacher' || role == 'admin') {
+        final err = _checkBan(doc.data()!);
+        if (err != null) {
+          await _auth.signOut();
+          _setError(err);
+          return false;
+        }
+        return true;
+      }
+      await _auth.signOut();
+      _setError('Unrecognized account role. Please contact an administrator.');
+      return false;
     }
     final nameParts = _splitDisplayName(user.displayName ?? '');
     final qrToken = _generateQrToken();
@@ -100,6 +111,23 @@ class AuthController extends ChangeNotifier {
       'createdAt': FieldValue.serverTimestamp(),
     });
     return true;
+  }
+
+  String? _checkBan(Map<String, dynamic> data) {
+    final isBanned = data['isBanned'] as bool? ?? false;
+    if (!isBanned) return null;
+    final bannedUntilTs = data['bannedUntil'] as Timestamp?;
+    if (bannedUntilTs != null &&
+        DateTime.now().isAfter(bannedUntilTs.toDate())) {
+      return null;
+    }
+    final reason = (data['banReason'] as String?)?.trim() ?? 'No reason given.';
+    final days = bannedUntilTs == null
+        ? 0
+        : bannedUntilTs.toDate().difference(DateTime.now()).inDays + 1;
+    final dayLabel = days == 1 ? 'day' : 'days';
+    return 'Your account has been temporarily suspended for $days $dayLabel.\n'
+        'Reason: $reason';
   }
 
   String _generateQrToken() {
@@ -137,6 +165,29 @@ class AuthController extends ChangeNotifier {
       return doc.exists && doc.data()?['role'] == 'teacher';
     } catch (_) {
       return false;
+    }
+  }
+
+  Future<bool> isSignedInAsAdmin() async {
+    final user = _auth.currentUser;
+    if (user == null || user.isAnonymous) return false;
+    try {
+      final doc = await _db.collection('users').doc(user.uid).get();
+      return doc.exists && doc.data()?['role'] == 'admin';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<String?> getSignedInRole() async {
+    final user = _auth.currentUser;
+    if (user == null || user.isAnonymous) return null;
+    try {
+      final doc = await _db.collection('users').doc(user.uid).get();
+      if (!doc.exists) return null;
+      return doc.data()?['role'] as String?;
+    } catch (_) {
+      return null;
     }
   }
 

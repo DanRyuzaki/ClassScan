@@ -84,6 +84,13 @@ class StudentAuthController extends ChangeNotifier {
         );
         return false;
       }
+      final banErr = _checkBan(doc.data()!);
+      if (banErr != null) {
+        await _auth.signOut();
+        await _auth.signInAnonymously();
+        _setError(banErr);
+        return false;
+      }
       return true;
     }
     final parts = _splitName(user.displayName ?? '');
@@ -97,6 +104,23 @@ class StudentAuthController extends ChangeNotifier {
       'createdAt': FieldValue.serverTimestamp(),
     });
     return true;
+  }
+
+  String? _checkBan(Map<String, dynamic> data) {
+    final isBanned = data['isBanned'] as bool? ?? false;
+    if (!isBanned) return null;
+    final bannedUntilTs = data['bannedUntil'] as Timestamp?;
+    if (bannedUntilTs != null &&
+        DateTime.now().isAfter(bannedUntilTs.toDate())) {
+      return null;
+    }
+    final reason = (data['banReason'] as String?)?.trim() ?? 'No reason given.';
+    final days = bannedUntilTs == null
+        ? 0
+        : bannedUntilTs.toDate().difference(DateTime.now()).inDays + 1;
+    final dayLabel = days == 1 ? 'day' : 'days';
+    return 'Your account has been temporarily suspended for $days $dayLabel.\n'
+        'Reason: $reason';
   }
 
   Map<String, String> _splitName(String name) {

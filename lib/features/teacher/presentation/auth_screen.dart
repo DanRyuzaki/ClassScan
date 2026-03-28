@@ -4,6 +4,7 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:toastification/toastification.dart';
 import '../logic/auth_controller.dart';
 import '../presentation/dashboard_screen.dart';
+import '../../admin/presentation/admin_dashboard_screen.dart';
 import '../../../core/controllers/dynamicsize_controller.dart';
 
 const _bg = Color(0xFF0A0A0A);
@@ -51,15 +52,25 @@ class _AuthScreenState extends State<AuthScreen>
 
   Future<void> _checkExistingSession() async {
     if (_isNavigating) return;
-    final isTeacher = await controller.isSignedInAsTeacher();
-    if (isTeacher && mounted && !_isNavigating) _goToDashboard();
+    final role = await controller.getSignedInRole();
+    if (!mounted || _isNavigating) return;
+    if (role == 'teacher') _goToTeacherDashboard();
+    if (role == 'admin') _goToAdminDashboard();
   }
 
-  void _goToDashboard() {
+  void _goToTeacherDashboard() {
     if (_isNavigating) return;
     _isNavigating = true;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const DashboardScreen()),
+    );
+  }
+
+  void _goToAdminDashboard() {
+    if (_isNavigating) return;
+    _isNavigating = true;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
     );
   }
 
@@ -107,7 +118,14 @@ class _AuthScreenState extends State<AuthScreen>
     if (success) {
       _showToast(title: 'Welcome!', message: 'Signed in successfully.');
       await Future.delayed(const Duration(milliseconds: 500));
-      if (mounted) _goToDashboard();
+      if (!mounted) return;
+      final role = await controller.getSignedInRole();
+      if (!mounted) return;
+      if (role == 'admin') {
+        _goToAdminDashboard();
+      } else {
+        _goToTeacherDashboard();
+      }
     } else if (controller.errorMessage != null) {
       _showToast(
         title: 'Sign-in Failed',
