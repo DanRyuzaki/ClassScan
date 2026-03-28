@@ -23,6 +23,8 @@ class AdminController extends ChangeNotifier {
     _middleName,
     _lastName,
   ].where((s) => s.trim().isNotEmpty).join(' ');
+  bool _signedOut = false;
+  bool get signedOut => _signedOut;
   AdminStatus _status = AdminStatus.idle;
   AdminStatus get status => _status;
   String? _errorMessage;
@@ -136,6 +138,7 @@ class AdminController extends ChangeNotifier {
   Future<void> signOut() async {
     await _auth.signOut();
     await _auth.signInAnonymously();
+    _signedOut = true;
     notifyListeners();
   }
 

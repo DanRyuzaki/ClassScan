@@ -25,6 +25,12 @@ doc/api/
 *.js.deps
 *.js.map
 
+.firebase/ 
+
+firebase.json
+.firebaserc
+.flutter-plugins-dependencies
+
 .flutter-plugins
 .flutter-plugins-dependencies
 

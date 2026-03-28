@@ -184,9 +184,27 @@ class AdminAccountsController extends ChangeNotifier {
     }
   }
 
+  Future<int> getTeacherClassCount(String uid) async {
+    if (role != 'teacher') return 0;
+    try {
+      final snap = await _db
+          .collection('classes')
+          .where('teacherID', isEqualTo: uid)
+          .get();
+      return snap.docs.length;
+    } catch (_) {
+      return 0;
+    }
+  }
+
   Future<String?> deleteAccount(String uid) async {
     _setSaving();
     try {
+      if (role == 'student') {
+        await _deleteStudentData(uid);
+      } else if (role == 'teacher') {
+        await _deleteTeacherData(uid);
+      }
       await _db.collection('users').doc(uid).delete();
       await loadAccounts();
       _setSuccess('Account deleted.');
@@ -196,6 +214,72 @@ class AdminAccountsController extends ChangeNotifier {
       _setError('Failed to delete account.');
       return 'Failed to delete account.';
     }
+  }
+
+  Future<void> _deleteStudentData(String uid) async {
+    final enrolledSnap = await _db
+        .collection('classes')
+        .where('enrolledStudents', arrayContains: uid)
+        .get();
+    final pendingSnap = await _db
+        .collection('classes')
+        .where('pendingStudents', arrayContains: uid)
+        .get();
+    final Map<String, DocumentSnapshot> affected = {};
+    for (final doc in [...enrolledSnap.docs, ...pendingSnap.docs]) {
+      affected[doc.id] = doc;
+    }
+    if (affected.isEmpty) return;
+    final batch = _db.batch();
+    for (final doc in affected.values) {
+      batch.update(doc.reference, {
+        'enrolledStudents': FieldValue.arrayRemove([uid]),
+        'pendingStudents': FieldValue.arrayRemove([uid]),
+      });
+    }
+    await batch.commit();
+  }
+
+  Future<void> _deleteTeacherData(String uid) async {
+    final sessionSnap = await _db
+        .collection('sessions')
+        .where('teacherID', isEqualTo: uid)
+        .get();
+    for (final sessionDoc in sessionSnap.docs) {
+      await _deleteSubCollection(sessionDoc.reference, 'attendance');
+      await sessionDoc.reference.delete();
+    }
+    final classSnap = await _db
+        .collection('classes')
+        .where('teacherID', isEqualTo: uid)
+        .get();
+    if (classSnap.docs.isNotEmpty) {
+      final batch = _db.batch();
+      for (final doc in classSnap.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+    }
+  }
+
+  Future<void> _deleteSubCollection(
+    DocumentReference parentRef,
+    String subCollectionName,
+  ) async {
+    const chunkSize = 400;
+    QuerySnapshot snap;
+    do {
+      snap = await parentRef
+          .collection(subCollectionName)
+          .limit(chunkSize)
+          .get();
+      if (snap.docs.isEmpty) break;
+      final batch = _db.batch();
+      for (final doc in snap.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+    } while (snap.docs.length == chunkSize);
   }
 
   Future<String?> banAccount({

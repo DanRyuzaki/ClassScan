@@ -225,62 +225,210 @@ class _AdminAccountsPageState extends State<AdminAccountsPage> {
   }
 
   void _showDeleteDialog(AdminAccountModel account) {
+    final isTeacher = widget.role == 'teacher';
+    final int mathA = 2 + (DateTime.now().millisecondsSinceEpoch % 18);
+    final int mathB = 2 + (DateTime.now().microsecondsSinceEpoch % 8);
+    final int mathAnswer = mathA + mathB;
+    final mathCtrl = TextEditingController();
     bool deleting = false;
+    String? mathError;
+    int? teacherClassCount;
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (_) => StatefulBuilder(
-        builder: (ctx, setDS) => AlertDialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          icon: const Icon(
-            Icons.delete_forever_rounded,
-            color: Color(0xFFE53935),
-            size: 32,
-          ),
-          title: const Text(
-            'Delete Account?',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          content: Text(
-            'This will permanently delete the account for '
-            '"${account.displayName}" (${account.email}).\n'
-            'This action cannot be undone.',
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.black54, fontSize: 13),
-          ),
-          actionsAlignment: MainAxisAlignment.center,
-          actions: [
-            TextButton(
-              onPressed: deleting ? null : () => Navigator.of(ctx).pop(),
-              child: const Text(
-                'Cancel',
-                style: TextStyle(color: Colors.black45),
+        builder: (ctx, setDS) {
+          if (isTeacher && teacherClassCount == null) {
+            _ctrl.getTeacherClassCount(account.uid).then((count) {
+              if (ctx.mounted) setDS(() => teacherClassCount = count);
+            });
+          }
+          return AlertDialog(
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            icon: const Icon(
+              Icons.delete_forever_rounded,
+              color: Color(0xFFE53935),
+              size: 32,
+            ),
+            title: const Text(
+              'Delete Account?',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            content: SizedBox(
+              width: 380,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'You are about to permanently delete the account for\n'
+                    '"${account.displayName}" (${account.email}).',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.black54, fontSize: 13),
+                  ),
+                  const SizedBox(height: 10),
+                  if (isTeacher) ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF3E0),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFFFB74D)),
+                      ),
+                      child: teacherClassCount == null
+                          ? const Center(
+                              child: SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Color(0xFFF57F17),
+                                ),
+                              ),
+                            )
+                          : Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(
+                                  Icons.warning_amber_rounded,
+                                  color: Color(0xFFF57F17),
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    teacherClassCount == 0
+                                        ? 'This teacher has no classes. Only their '
+                                              'account and login access will be removed.'
+                                        : 'This teacher owns $teacherClassCount '
+                                              '${teacherClassCount == 1 ? 'class' : 'classes'}. '
+                                              'Deleting this account will also permanently '
+                                              'delete all of their classes and class data.',
+                                    style: const TextStyle(
+                                      color: Color(0xFF5D4037),
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFEBEE),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFEF9A9A)),
+                    ),
+                    child: const Text(
+                      '⚠️  This action cannot be undone. The account and '
+                      'login access will be permanently removed.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Color(0xFFB71C1C),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'To confirm, solve: $mathA + $mathB = ?',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black54,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: mathCtrl,
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(fontSize: 14),
+                    onChanged: (_) {
+                      if (mathError != null) setDS(() => mathError = null);
+                    },
+                    decoration: InputDecoration(
+                      hintText: 'Enter the answer…',
+                      hintStyle: const TextStyle(
+                        color: Colors.black38,
+                        fontSize: 12,
+                      ),
+                      errorText: mathError,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(
+                          color: Color(0xFFE53935),
+                          width: 1.5,
+                        ),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            _actionButton(
-              label: 'Delete',
-              loading: deleting,
-              isDestructive: true,
-              onTap: () async {
-                setDS(() => deleting = true);
-                final err = await _ctrl.deleteAccount(account.uid);
-                if (!ctx.mounted) return;
-                Navigator.of(ctx).pop();
-                if (err != null) {
-                  _toast(title: 'Error', message: err, isError: true);
-                } else {
-                  _toast(
-                    title: 'Account Deleted',
-                    message: '${account.displayName} has been removed.',
-                  );
-                }
-              },
-            ),
-          ],
-        ),
+            actionsAlignment: MainAxisAlignment.center,
+            actions: [
+              TextButton(
+                onPressed: deleting ? null : () => Navigator.of(ctx).pop(),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(color: Colors.black45),
+                ),
+              ),
+              _actionButton(
+                label: 'Delete',
+                loading: deleting,
+                isDestructive: true,
+                onTap: () async {
+                  final typed = int.tryParse(mathCtrl.text.trim());
+                  if (typed == null || typed != mathAnswer) {
+                    setDS(
+                      () => mathError = 'Incorrect answer. Please try again.',
+                    );
+                    return;
+                  }
+                  setDS(() => deleting = true);
+                  final err = await _ctrl.deleteAccount(account.uid);
+                  if (!ctx.mounted) return;
+                  Navigator.of(ctx).pop();
+                  if (err != null) {
+                    _toast(title: 'Error', message: err, isError: true);
+                  } else {
+                    _toast(
+                      title: 'Account Deleted',
+                      message: isTeacher
+                          ? '${account.displayName} and their classes have been removed.'
+                          : '${account.displayName} has been removed.',
+                    );
+                  }
+                },
+              ),
+            ],
+          );
+        },
       ),
     );
   }

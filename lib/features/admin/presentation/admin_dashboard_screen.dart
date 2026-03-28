@@ -20,7 +20,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   int _navIndex = 0;
   bool get _isSidebarLayout => MediaQuery.of(context).size.width >= 700;
   @override
+  void initState() {
+    super.initState();
+    controller.addListener(_onControllerUpdate);
+  }
+
+  void _onControllerUpdate() {
+    if (controller.signedOut && mounted) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const AuthScreen(fromSignOut: true)),
+      );
+    }
+  }
+
+  @override
   void dispose() {
+    controller.removeListener(_onControllerUpdate);
     controller.dispose();
     super.dispose();
   }
