@@ -383,18 +383,12 @@ class _SettingsPageState extends State<SettingsPage> {
       builder: (_) => AlertDialog(
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
+        title: const Text(
           'Choose Profile Emoji',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: DynamicSizeController.calculateAspectRatioSize(
-              context,
-              0.016,
-            ),
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
         content: SizedBox(
-          width: DynamicSizeController.calculateWidthSize(context, 0.28),
+          width: 300,
           child: Wrap(
             spacing: 12,
             runSpacing: 12,
@@ -422,16 +416,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         width: 2,
                       ),
                     ),
-                    child: Text(
-                      emoji,
-                      style: TextStyle(
-                        fontSize:
-                            DynamicSizeController.calculateAspectRatioSize(
-                              context,
-                              0.022,
-                            ),
-                      ),
-                    ),
+                    child: Text(emoji, style: const TextStyle(fontSize: 22)),
                   ),
                 ),
               );
@@ -449,6 +434,7 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  static const double _mobileBreak = 700;
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -459,27 +445,63 @@ class _SettingsPageState extends State<SettingsPage> {
             child: CircularProgressIndicator(color: Color(0xFFAEEA00)),
           );
         }
-        return SingleChildScrollView(
-          padding: EdgeInsets.symmetric(
-            horizontal: DynamicSizeController.calculateWidthSize(context, 0.04),
-            vertical: DynamicSizeController.calculateHeightSize(context, 0.03),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(flex: 3, child: _buildProfileSection(context)),
-              SizedBox(
-                width: DynamicSizeController.calculateWidthSize(context, 0.04),
-              ),
-              Expanded(flex: 2, child: _buildQrSection(context)),
-            ],
-          ),
-        );
+        final isMobile = MediaQuery.of(context).size.width < _mobileBreak;
+        if (isMobile) {
+          return _buildMobileLayout(context);
+        }
+        return _buildDesktopLayout(context);
       },
     );
   }
 
+  Widget _buildDesktopLayout(BuildContext context) {
+    return SingleChildScrollView(
+      padding: EdgeInsets.symmetric(
+        horizontal: DynamicSizeController.calculateWidthSize(context, 0.04),
+        vertical: DynamicSizeController.calculateHeightSize(context, 0.03),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(flex: 3, child: _buildProfileSection(context)),
+          SizedBox(
+            width: DynamicSizeController.calculateWidthSize(context, 0.04),
+          ),
+          Expanded(flex: 2, child: _buildQrSection(context)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileLayout(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildProfileSection(context),
+          const SizedBox(height: 32),
+          _buildQrSection(context),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+
   Widget _buildProfileSection(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < _mobileBreak;
+    final titleFontSize = isMobile
+        ? 15.0
+        : DynamicSizeController.calculateAspectRatioSize(context, 0.016);
+    final subtitleFontSize = isMobile
+        ? 12.0
+        : DynamicSizeController.calculateAspectRatioSize(context, 0.011);
+    final avatarSize = isMobile
+        ? 60.0
+        : DynamicSizeController.calculateAspectRatioSize(context, 0.065);
+    final avatarEmojiSize = isMobile
+        ? 28.0
+        : DynamicSizeController.calculateAspectRatioSize(context, 0.030);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -487,29 +509,16 @@ class _SettingsPageState extends State<SettingsPage> {
           'Profile Information',
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            fontSize: DynamicSizeController.calculateAspectRatioSize(
-              context,
-              0.016,
-            ),
+            fontSize: titleFontSize,
             color: Colors.black87,
           ),
         ),
-        SizedBox(
-          height: DynamicSizeController.calculateHeightSize(context, 0.006),
-        ),
+        const SizedBox(height: 4),
         Text(
           'Edit your name and profile emoji. Email and role cannot be changed.',
-          style: TextStyle(
-            color: Colors.black45,
-            fontSize: DynamicSizeController.calculateAspectRatioSize(
-              context,
-              0.011,
-            ),
-          ),
+          style: TextStyle(color: Colors.black45, fontSize: subtitleFontSize),
         ),
-        SizedBox(
-          height: DynamicSizeController.calculateHeightSize(context, 0.028),
-        ),
+        const SizedBox(height: 20),
         Row(
           children: [
             GestureDetector(
@@ -517,14 +526,8 @@ class _SettingsPageState extends State<SettingsPage> {
               child: MouseRegion(
                 cursor: SystemMouseCursors.click,
                 child: Container(
-                  width: DynamicSizeController.calculateAspectRatioSize(
-                    context,
-                    0.065,
-                  ),
-                  height: DynamicSizeController.calculateAspectRatioSize(
-                    context,
-                    0.065,
-                  ),
+                  width: avatarSize,
+                  height: avatarSize,
                   decoration: BoxDecoration(
                     color: const Color(0xFFAEEA00).withValues(alpha: 0.15),
                     shape: BoxShape.circle,
@@ -536,21 +539,13 @@ class _SettingsPageState extends State<SettingsPage> {
                   child: Center(
                     child: Text(
                       _selectedEmoji,
-                      style: TextStyle(
-                        fontSize:
-                            DynamicSizeController.calculateAspectRatioSize(
-                              context,
-                              0.030,
-                            ),
-                      ),
+                      style: TextStyle(fontSize: avatarEmojiSize),
                     ),
                   ),
                 ),
               ),
             ),
-            SizedBox(
-              width: DynamicSizeController.calculateWidthSize(context, 0.016),
-            ),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -561,27 +556,24 @@ class _SettingsPageState extends State<SettingsPage> {
                         : 'Your Name',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: DynamicSizeController.calculateAspectRatioSize(
-                        context,
-                        0.016,
-                      ),
+                      fontSize: titleFontSize,
                       color: Colors.black87,
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 2),
                   Text(
                     controller.email,
                     style: TextStyle(
                       color: Colors.black45,
-                      fontSize: DynamicSizeController.calculateAspectRatioSize(
-                        context,
-                        0.011,
-                      ),
+                      fontSize: subtitleFontSize,
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
+            const SizedBox(width: 8),
             GestureDetector(
               onTap: _showEmojiPicker,
               child: MouseRegion(
@@ -602,22 +594,12 @@ class _SettingsPageState extends State<SettingsPage> {
                       HugeIcon(
                         icon: HugeIcons.strokeRoundedSmile,
                         color: Colors.black45,
-                        size: DynamicSizeController.calculateAspectRatioSize(
-                          context,
-                          0.013,
-                        ),
+                        size: 14,
                       ),
                       const SizedBox(width: 6),
-                      Text(
+                      const Text(
                         'Change Emoji',
-                        style: TextStyle(
-                          color: Colors.black54,
-                          fontSize:
-                              DynamicSizeController.calculateAspectRatioSize(
-                                context,
-                                0.011,
-                              ),
-                        ),
+                        style: TextStyle(color: Colors.black54, fontSize: 12),
                       ),
                     ],
                   ),
@@ -626,22 +608,16 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ],
         ),
-        SizedBox(
-          height: DynamicSizeController.calculateHeightSize(context, 0.028),
-        ),
+        const SizedBox(height: 20),
         const Divider(color: Color(0xFFE0E0E0)),
-        SizedBox(
-          height: DynamicSizeController.calculateHeightSize(context, 0.022),
-        ),
+        const SizedBox(height: 16),
         _buildField(
           context,
           label: 'First Name',
           controller: _firstNameCtrl,
           icon: HugeIcons.strokeRoundedUser,
         ),
-        SizedBox(
-          height: DynamicSizeController.calculateHeightSize(context, 0.014),
-        ),
+        const SizedBox(height: 12),
         _buildField(
           context,
           label: 'Middle Name',
@@ -649,27 +625,21 @@ class _SettingsPageState extends State<SettingsPage> {
           icon: HugeIcons.strokeRoundedUser,
           optional: true,
         ),
-        SizedBox(
-          height: DynamicSizeController.calculateHeightSize(context, 0.014),
-        ),
+        const SizedBox(height: 12),
         _buildField(
           context,
           label: 'Last Name',
           controller: _lastNameCtrl,
           icon: HugeIcons.strokeRoundedUser,
         ),
-        SizedBox(
-          height: DynamicSizeController.calculateHeightSize(context, 0.014),
-        ),
+        const SizedBox(height: 12),
         _buildReadOnlyField(
           context,
           label: 'Email Address',
           value: controller.email,
           icon: HugeIcons.strokeRoundedMail01,
         ),
-        SizedBox(
-          height: DynamicSizeController.calculateHeightSize(context, 0.014),
-        ),
+        const SizedBox(height: 12),
         _buildReadOnlyField(
           context,
           label: 'Role',
@@ -678,9 +648,7 @@ class _SettingsPageState extends State<SettingsPage> {
               : 'Teacher',
           icon: HugeIcons.strokeRoundedTeacher,
         ),
-        SizedBox(
-          height: DynamicSizeController.calculateHeightSize(context, 0.028),
-        ),
+        const SizedBox(height: 24),
         GestureDetector(
           onTap: controller.isLoading
               ? null
@@ -696,12 +664,7 @@ class _SettingsPageState extends State<SettingsPage> {
             cursor: SystemMouseCursors.click,
             child: Container(
               width: double.infinity,
-              padding: EdgeInsets.symmetric(
-                vertical: DynamicSizeController.calculateHeightSize(
-                  context,
-                  0.016,
-                ),
-              ),
+              padding: const EdgeInsets.symmetric(vertical: 14),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   colors: [Color(0xFFCCFF00), Color(0xFF76C442)],
@@ -720,16 +683,12 @@ class _SettingsPageState extends State<SettingsPage> {
                         color: Colors.black,
                       ),
                     )
-                  : Text(
+                  : const Text(
                       'Save Changes',
                       style: TextStyle(
                         color: Colors.black,
                         fontWeight: FontWeight.w700,
-                        fontSize:
-                            DynamicSizeController.calculateAspectRatioSize(
-                              context,
-                              0.013,
-                            ),
+                        fontSize: 14,
                       ),
                     ),
             ),
@@ -740,6 +699,16 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Widget _buildQrSection(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < _mobileBreak;
+    final titleFontSize = isMobile
+        ? 15.0
+        : DynamicSizeController.calculateAspectRatioSize(context, 0.016);
+    final subtitleFontSize = isMobile
+        ? 12.0
+        : DynamicSizeController.calculateAspectRatioSize(context, 0.011);
+    final qrSize = isMobile
+        ? 200.0
+        : DynamicSizeController.calculateAspectRatioSize(context, 0.18);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -747,34 +716,19 @@ class _SettingsPageState extends State<SettingsPage> {
           'My QR Code',
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            fontSize: DynamicSizeController.calculateAspectRatioSize(
-              context,
-              0.016,
-            ),
+            fontSize: titleFontSize,
             color: Colors.black87,
           ),
         ),
-        SizedBox(
-          height: DynamicSizeController.calculateHeightSize(context, 0.006),
-        ),
+        const SizedBox(height: 4),
         Text(
           'Use this QR code to verify sessions at the kiosk.',
-          style: TextStyle(
-            color: Colors.black45,
-            fontSize: DynamicSizeController.calculateAspectRatioSize(
-              context,
-              0.011,
-            ),
-          ),
+          style: TextStyle(color: Colors.black45, fontSize: subtitleFontSize),
         ),
-        SizedBox(
-          height: DynamicSizeController.calculateHeightSize(context, 0.022),
-        ),
+        const SizedBox(height: 16),
         Container(
           width: double.infinity,
-          padding: EdgeInsets.all(
-            DynamicSizeController.calculateAspectRatioSize(context, 0.022),
-          ),
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
@@ -799,26 +753,14 @@ class _SettingsPageState extends State<SettingsPage> {
                             ? HugeIcons.strokeRoundedView
                             : HugeIcons.strokeRoundedViewOff,
                         color: Colors.black54,
-                        size: DynamicSizeController.calculateAspectRatioSize(
-                          context,
-                          0.016,
-                        ),
+                        size: 18,
                       ),
-                      SizedBox(
-                        width: DynamicSizeController.calculateWidthSize(
-                          context,
-                          0.006,
-                        ),
-                      ),
+                      const SizedBox(width: 8),
                       Text(
                         controller.qrVisible ? 'QR Visible' : 'QR Hidden',
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: Colors.black54,
-                          fontSize:
-                              DynamicSizeController.calculateAspectRatioSize(
-                                context,
-                                0.012,
-                              ),
+                          fontSize: 13,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -834,12 +776,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ],
               ),
-              SizedBox(
-                height: DynamicSizeController.calculateHeightSize(
-                  context,
-                  0.018,
-                ),
-              ),
+              const SizedBox(height: 16),
               AnimatedCrossFade(
                 duration: const Duration(milliseconds: 300),
                 crossFadeState: controller.qrVisible
@@ -852,16 +789,8 @@ class _SettingsPageState extends State<SettingsPage> {
                     padding: const EdgeInsets.all(12),
                     child: controller.qrPayload.isEmpty
                         ? SizedBox(
-                            width:
-                                DynamicSizeController.calculateAspectRatioSize(
-                                  context,
-                                  0.18,
-                                ),
-                            height:
-                                DynamicSizeController.calculateAspectRatioSize(
-                                  context,
-                                  0.18,
-                                ),
+                            width: qrSize,
+                            height: qrSize,
                             child: const Center(
                               child: CircularProgressIndicator(
                                 color: Color(0xFFAEEA00),
@@ -871,11 +800,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         : QrImageView(
                             data: controller.qrPayload,
                             version: QrVersions.auto,
-                            size:
-                                DynamicSizeController.calculateAspectRatioSize(
-                                  context,
-                                  0.18,
-                                ),
+                            size: qrSize,
                             backgroundColor: Colors.white,
                             eyeStyle: const QrEyeStyle(
                               eyeShape: QrEyeShape.square,
@@ -889,94 +814,52 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
                 secondChild: Container(
-                  width: DynamicSizeController.calculateAspectRatioSize(
-                    context,
-                    0.18,
-                  ),
-                  height: DynamicSizeController.calculateAspectRatioSize(
-                    context,
-                    0.18,
-                  ),
+                  width: qrSize,
+                  height: qrSize,
                   decoration: BoxDecoration(
                     color: const Color(0xFFF0F0F0),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        HugeIcon(
-                          icon: HugeIcons.strokeRoundedViewOff,
-                          color: Colors.black26,
-                          size: DynamicSizeController.calculateAspectRatioSize(
-                            context,
-                            0.035,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Toggle to reveal',
-                          style: TextStyle(
-                            color: Colors.black38,
-                            fontSize:
-                                DynamicSizeController.calculateAspectRatioSize(
-                                  context,
-                                  0.011,
-                                ),
-                          ),
-                        ),
-                      ],
-                    ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      HugeIcon(
+                        icon: HugeIcons.strokeRoundedViewOff,
+                        color: Colors.black26,
+                        size: 36,
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Toggle to reveal',
+                        style: TextStyle(color: Colors.black38, fontSize: 13),
+                      ),
+                    ],
                   ),
                 ),
               ),
-              SizedBox(
-                height: DynamicSizeController.calculateHeightSize(
-                  context,
-                  0.016,
-                ),
-              ),
+              const SizedBox(height: 14),
               if (controller.qrVisible) ...[
                 Text(
                   controller.displayName,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontWeight: FontWeight.bold,
-                    fontSize: DynamicSizeController.calculateAspectRatioSize(
-                      context,
-                      0.013,
-                    ),
+                    fontSize: 14,
                     color: Colors.black87,
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(
+                const Text(
                   'Teacher',
-                  style: TextStyle(
-                    color: Colors.black38,
-                    fontSize: DynamicSizeController.calculateAspectRatioSize(
-                      context,
-                      0.010,
-                    ),
-                  ),
+                  style: TextStyle(color: Colors.black38, fontSize: 12),
                 ),
-                SizedBox(
-                  height: DynamicSizeController.calculateHeightSize(
-                    context,
-                    0.014,
-                  ),
-                ),
+                const SizedBox(height: 12),
                 GestureDetector(
                   onTap: _saveQrImage,
                   child: MouseRegion(
                     cursor: SystemMouseCursors.click,
                     child: Container(
                       width: double.infinity,
-                      padding: EdgeInsets.symmetric(
-                        vertical: DynamicSizeController.calculateHeightSize(
-                          context,
-                          0.012,
-                        ),
-                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 11),
                       decoration: BoxDecoration(
                         color: const Color(0xFFF5F5F5),
                         borderRadius: BorderRadius.circular(8),
@@ -988,28 +871,15 @@ class _SettingsPageState extends State<SettingsPage> {
                           HugeIcon(
                             icon: HugeIcons.strokeRoundedDownload01,
                             color: Colors.black54,
-                            size:
-                                DynamicSizeController.calculateAspectRatioSize(
-                                  context,
-                                  0.015,
-                                ),
+                            size: 16,
                           ),
-                          SizedBox(
-                            width: DynamicSizeController.calculateWidthSize(
-                              context,
-                              0.006,
-                            ),
-                          ),
-                          Text(
+                          const SizedBox(width: 8),
+                          const Text(
                             'Save QR Image',
                             style: TextStyle(
                               color: Colors.black54,
                               fontWeight: FontWeight.w600,
-                              fontSize:
-                                  DynamicSizeController.calculateAspectRatioSize(
-                                    context,
-                                    0.012,
-                                  ),
+                              fontSize: 13,
                             ),
                           ),
                         ],
@@ -1017,12 +887,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                   ),
                 ),
-                SizedBox(
-                  height: DynamicSizeController.calculateHeightSize(
-                    context,
-                    0.010,
-                  ),
-                ),
+                const SizedBox(height: 8),
                 GestureDetector(
                   onTap: controller.regenerating
                       ? null
@@ -1036,12 +901,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       opacity: controller.regenerating ? 0.5 : 1.0,
                       child: Container(
                         width: double.infinity,
-                        padding: EdgeInsets.symmetric(
-                          vertical: DynamicSizeController.calculateHeightSize(
-                            context,
-                            0.012,
-                          ),
-                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 11),
                         decoration: BoxDecoration(
                           color: const Color(0xFFFFEBEE),
                           borderRadius: BorderRadius.circular(8),
@@ -1066,30 +926,17 @@ class _SettingsPageState extends State<SettingsPage> {
                                 : HugeIcon(
                                     icon: HugeIcons.strokeRoundedRefresh,
                                     color: const Color(0xFFE53935),
-                                    size:
-                                        DynamicSizeController.calculateAspectRatioSize(
-                                          context,
-                                          0.015,
-                                        ),
+                                    size: 16,
                                   ),
-                            SizedBox(
-                              width: DynamicSizeController.calculateWidthSize(
-                                context,
-                                0.006,
-                              ),
-                            ),
+                            const SizedBox(width: 8),
                             Text(
                               controller.regenerating
                                   ? 'Regenerating...'
                                   : 'Regenerate QR Code',
-                              style: TextStyle(
-                                color: const Color(0xFFE53935),
+                              style: const TextStyle(
+                                color: Color(0xFFE53935),
                                 fontWeight: FontWeight.w600,
-                                fontSize:
-                                    DynamicSizeController.calculateAspectRatioSize(
-                                      context,
-                                      0.012,
-                                    ),
+                                fontSize: 13,
                               ),
                             ),
                           ],
@@ -1102,13 +949,9 @@ class _SettingsPageState extends State<SettingsPage> {
             ],
           ),
         ),
-        SizedBox(
-          height: DynamicSizeController.calculateHeightSize(context, 0.016),
-        ),
+        const SizedBox(height: 14),
         Container(
-          padding: EdgeInsets.all(
-            DynamicSizeController.calculateAspectRatioSize(context, 0.014),
-          ),
+          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: const Color(0xFFFFF3E0),
             borderRadius: BorderRadius.circular(10),
@@ -1120,42 +963,29 @@ class _SettingsPageState extends State<SettingsPage> {
               HugeIcon(
                 icon: HugeIcons.strokeRoundedAlertCircle,
                 color: const Color(0xFFE65100),
-                size: DynamicSizeController.calculateAspectRatioSize(
-                  context,
-                  0.016,
-                ),
+                size: 16,
               ),
-              SizedBox(
-                width: DynamicSizeController.calculateWidthSize(context, 0.008),
-              ),
-              Expanded(
+              const SizedBox(width: 10),
+              const Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'Keep your QR code private',
                       style: TextStyle(
-                        color: const Color(0xFFE65100),
+                        color: Color(0xFFE65100),
                         fontWeight: FontWeight.w700,
-                        fontSize:
-                            DynamicSizeController.calculateAspectRatioSize(
-                              context,
-                              0.012,
-                            ),
+                        fontSize: 13,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: 4),
                     Text(
                       'Your QR code is the key to verifying class sessions. '
                       'Do not share it with students or anyone else. '
                       'Anyone with this code can verify sessions on your behalf.',
                       style: TextStyle(
-                        color: const Color(0xFFBF360C),
-                        fontSize:
-                            DynamicSizeController.calculateAspectRatioSize(
-                              context,
-                              0.010,
-                            ),
+                        color: Color(0xFFBF360C),
+                        fontSize: 12,
                         height: 1.5,
                       ),
                     ),
@@ -1178,34 +1008,15 @@ class _SettingsPageState extends State<SettingsPage> {
   }) {
     return TextField(
       controller: controller,
-      style: TextStyle(
-        fontSize: DynamicSizeController.calculateAspectRatioSize(
-          context,
-          0.013,
-        ),
-        color: Colors.black87,
-      ),
+      style: const TextStyle(fontSize: 14, color: Colors.black87),
       decoration: InputDecoration(
         labelText: optional ? '$label (optional)' : label,
-        labelStyle: TextStyle(
-          color: Colors.black45,
-          fontSize: DynamicSizeController.calculateAspectRatioSize(
-            context,
-            0.012,
-          ),
-        ),
+        labelStyle: const TextStyle(color: Colors.black45, fontSize: 13),
         filled: true,
         fillColor: Colors.white,
         prefixIcon: Padding(
           padding: const EdgeInsets.all(10),
-          child: HugeIcon(
-            icon: icon,
-            color: Colors.black38,
-            size: DynamicSizeController.calculateAspectRatioSize(
-              context,
-              0.016,
-            ),
-          ),
+          child: HugeIcon(icon: icon, color: Colors.black38, size: 18),
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
@@ -1219,9 +1030,9 @@ class _SettingsPageState extends State<SettingsPage> {
           borderRadius: BorderRadius.circular(8),
           borderSide: const BorderSide(color: Color(0xFFAEEA00), width: 2),
         ),
-        contentPadding: EdgeInsets.symmetric(
-          horizontal: DynamicSizeController.calculateWidthSize(context, 0.012),
-          vertical: DynamicSizeController.calculateHeightSize(context, 0.014),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 14,
         ),
       ),
     );
@@ -1234,10 +1045,7 @@ class _SettingsPageState extends State<SettingsPage> {
     required List<List<dynamic>> icon,
   }) {
     return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: DynamicSizeController.calculateWidthSize(context, 0.012),
-        vertical: DynamicSizeController.calculateHeightSize(context, 0.014),
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       decoration: BoxDecoration(
         color: const Color(0xFFF5F5F5),
         borderRadius: BorderRadius.circular(8),
@@ -1245,40 +1053,19 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
       child: Row(
         children: [
-          HugeIcon(
-            icon: icon,
-            color: Colors.black26,
-            size: DynamicSizeController.calculateAspectRatioSize(
-              context,
-              0.016,
-            ),
-          ),
-          SizedBox(
-            width: DynamicSizeController.calculateWidthSize(context, 0.010),
-          ),
+          HugeIcon(icon: icon, color: Colors.black26, size: 18),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   label,
-                  style: TextStyle(
-                    color: Colors.black38,
-                    fontSize: DynamicSizeController.calculateAspectRatioSize(
-                      context,
-                      0.010,
-                    ),
-                  ),
+                  style: const TextStyle(color: Colors.black38, fontSize: 11),
                 ),
                 Text(
                   value,
-                  style: TextStyle(
-                    color: Colors.black54,
-                    fontSize: DynamicSizeController.calculateAspectRatioSize(
-                      context,
-                      0.013,
-                    ),
-                  ),
+                  style: const TextStyle(color: Colors.black54, fontSize: 14),
                 ),
               ],
             ),
@@ -1286,10 +1073,7 @@ class _SettingsPageState extends State<SettingsPage> {
           HugeIcon(
             icon: HugeIcons.strokeRoundedLocked,
             color: Colors.black26,
-            size: DynamicSizeController.calculateAspectRatioSize(
-              context,
-              0.013,
-            ),
+            size: 14,
           ),
         ],
       ),

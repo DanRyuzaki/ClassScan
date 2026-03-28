@@ -378,36 +378,44 @@ class KioskController extends ChangeNotifier {
         return;
       }
       final locParts = parts[4].split(',');
-      if (locParts.length == 2) {
-        final studentLat = double.tryParse(locParts[0]);
-        final studentLng = double.tryParse(locParts[1]);
-        if (studentLat == null || studentLng == null) {
-          showToast(
-            KioskToast(
-              title: 'Invalid Location',
-              message: 'Could not read location data from QR code.',
-              isError: true,
-            ),
-          );
-          return;
-        }
-        final distance = _haversineDistance(
-          _kioskLat!,
-          _kioskLng!,
-          studentLat,
-          studentLng,
+      if (locParts.length != 2) {
+        showToast(
+          KioskToast(
+            title: 'Invalid Location',
+            message: 'Could not read location data from QR code.',
+            isError: true,
+          ),
         );
-        if (distance > _proximityThreshold) {
-          showToast(
-            KioskToast(
-              title: 'Too Far from Kiosk',
-              message:
-                  '${distance.round()}m away — limit is ${_proximityThreshold}m.',
-              isError: true,
-            ),
-          );
-          return;
-        }
+        return;
+      }
+      final studentLat = double.tryParse(locParts[0]);
+      final studentLng = double.tryParse(locParts[1]);
+      if (studentLat == null || studentLng == null) {
+        showToast(
+          KioskToast(
+            title: 'Invalid Location',
+            message: 'Could not read location data from QR code.',
+            isError: true,
+          ),
+        );
+        return;
+      }
+      final distance = _haversineDistance(
+        _kioskLat!,
+        _kioskLng!,
+        studentLat,
+        studentLng,
+      );
+      if (distance > _proximityThreshold) {
+        showToast(
+          KioskToast(
+            title: 'Too Far from Kiosk',
+            message:
+                '${distance.round()}m away — limit is ${_proximityThreshold}m.',
+            isError: true,
+          ),
+        );
+        return;
       }
     }
     if (!_enrolledStudentUIDs.contains(student.uid)) {
@@ -557,15 +565,21 @@ class KioskController extends ChangeNotifier {
 
   Future<void> _fetchKioskLocation() async {
     try {
-      final permission = await Geolocator.checkPermission();
+      LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
-        await Geolocator.requestPermission();
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        _kioskLat = null;
+        _kioskLng = null;
+        return;
       }
       final pos = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
         ),
-      ).timeout(const Duration(seconds: 8));
+      ).timeout(const Duration(seconds: 10));
       _kioskLat = pos.latitude;
       _kioskLng = pos.longitude;
     } catch (_) {

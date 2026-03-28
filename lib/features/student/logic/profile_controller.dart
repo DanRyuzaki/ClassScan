@@ -52,15 +52,21 @@ class StudentProfileController extends ChangeNotifier {
 
   Future<void> _fetchLocation() async {
     try {
-      final permission = await Geolocator.checkPermission();
+      LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
-        await Geolocator.requestPermission();
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        _locationPayload = null;
+        notifyListeners();
+        return;
       }
       final pos = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
         ),
-      ).timeout(const Duration(seconds: 8));
+      ).timeout(const Duration(seconds: 10));
       _locationPayload =
           '${pos.latitude.toStringAsFixed(6)},${pos.longitude.toStringAsFixed(6)}';
     } catch (_) {
