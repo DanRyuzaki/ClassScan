@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import '../../../../core/services/device_service.dart';
 
 enum ProfileStatus { idle, loading, success, error }
 
@@ -76,7 +77,7 @@ class StudentProfileController extends ChangeNotifier {
   }
 
   String get qrPayload {
-    final base = 'CLASSSCAN|$uid|$_todayDate';
+    final base = 'CLASSSCAN|$uid|$_todayDate|${DeviceService.deviceUUID}';
     if (_locationPayload != null) return '$base|$_locationPayload';
     return base;
   }

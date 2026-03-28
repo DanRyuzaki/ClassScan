@@ -195,7 +195,7 @@ class _MainScreenState extends State<MainScreen>
           ),
         ),
         content: Text(
-          'You are currently signed in as a $role.\n\n'
+          'You are currently signed in as a $role.\n'
           'Please sign out from the $currentPortal first before accessing the $blocked.',
           textAlign: TextAlign.center,
           style: const TextStyle(

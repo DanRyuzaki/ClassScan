@@ -234,6 +234,7 @@ class KioskController extends ChangeNotifier {
         }
       }
     }
+    final deviceUUID = parts.length >= 4 ? parts[3] : null;
     try {
       final doc = await _db.collection('users').doc(uid).get();
       if (!doc.exists || doc.data() == null) {
@@ -250,7 +251,7 @@ class KioskController extends ChangeNotifier {
       if (user.role == 'teacher') {
         await _handleTeacherScan(user, parts);
       } else if (user.role == 'student') {
-        await _handleStudentScan(user, parts);
+        await _handleStudentScan(user, parts, deviceUUID);
       } else {
         showToast(
           KioskToast(
@@ -342,10 +343,29 @@ class KioskController extends ChangeNotifier {
   }
 
   final Set<String> _processingUIDs = {};
-  Future<void> _handleStudentScan(KioskUser student, List<String> parts) async {
+  Future<void> _handleStudentScan(
+    KioskUser student,
+    List<String> parts,
+    String? deviceUUID,
+  ) async {
     if (_activeSessionId == null) return;
+    if (deviceUUID != null && deviceUUID.isNotEmpty) {
+      final existingUid = _deviceUidMap[deviceUUID];
+      if (existingUid != null && existingUid != student.uid) {
+        showToast(
+          KioskToast(
+            title: 'Device Already Used',
+            message:
+                'This device was already used to scan a different '
+                'student this session.',
+            isError: true,
+          ),
+        );
+        return;
+      }
+    }
     if (_locationValidation && _kioskLat != null) {
-      if (parts.length < 4 || parts[3].isEmpty) {
+      if (parts.length < 5 || parts[4].isEmpty) {
         showToast(
           KioskToast(
             title: 'Location Required',
@@ -357,7 +377,7 @@ class KioskController extends ChangeNotifier {
         );
         return;
       }
-      final locParts = parts[3].split(',');
+      final locParts = parts[4].split(',');
       if (locParts.length == 2) {
         final studentLat = double.tryParse(locParts[0]);
         final studentLng = double.tryParse(locParts[1]);
@@ -494,6 +514,9 @@ class KioskController extends ChangeNotifier {
       }
       final timeInNow = DateTime.now();
       _timeInLog[student.uid] = timeInNow;
+      if (deviceUUID != null && deviceUUID.isNotEmpty) {
+        _deviceUidMap[deviceUUID] = student.uid;
+      }
       _scannedStudents[student.uid] = {
         'fullName': student.fullName,
         'timeIn': timeInNow,
@@ -525,6 +548,7 @@ class KioskController extends ChangeNotifier {
   final Set<String> _timedOutLog = {};
   final Map<String, DateTime> _perStudentCooldown = {};
   final Map<String, Map<String, dynamic>> _scannedStudents = {};
+  final Map<String, String> _deviceUidMap = {};
   String _formatDateForQr(DateTime dt) {
     return '${dt.year}-'
         '${dt.month.toString().padLeft(2, '0')}-'
@@ -770,6 +794,7 @@ class KioskController extends ChangeNotifier {
       _timedOutLog.clear();
       _perStudentCooldown.clear();
       _scannedStudents.clear();
+      _deviceUidMap.clear();
       notifyListeners();
     });
   }
