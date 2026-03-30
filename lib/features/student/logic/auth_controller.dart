@@ -76,7 +76,7 @@ class StudentAuthController extends ChangeNotifier {
     final doc = await docRef.get();
     if (doc.exists) {
       final role = doc.data()?['role'];
-      if (role == 'teacher') {
+      if (role != 'student') {
         await _auth.signOut();
         _setError(
           'This account is registered as a teacher. '

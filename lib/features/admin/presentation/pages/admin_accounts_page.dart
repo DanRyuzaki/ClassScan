@@ -876,52 +876,7 @@ class _AdminAccountsPageState extends State<AdminAccountsPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (_isWide)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 6),
-            child: Row(
-              children: [
-                SizedBox(width: _w(0.025, min: 16)),
-                const Expanded(
-                  flex: 3,
-                  child: Text(
-                    'NAME',
-                    style: TextStyle(
-                      color: Colors.black38,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                ),
-                const Expanded(
-                  flex: 3,
-                  child: Text(
-                    'EMAIL',
-                    style: TextStyle(
-                      color: Colors.black38,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                ),
-                const SizedBox(
-                  width: 100,
-                  child: Text(
-                    'STATUS',
-                    style: TextStyle(
-                      color: Colors.black38,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-              ],
-            ),
-          ),
+        if (_isWide) _buildHeader(),
         Expanded(
           child: ListView.separated(
             itemCount: items.length,
@@ -943,6 +898,22 @@ class _AdminAccountsPageState extends State<AdminAccountsPage> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.only(left: 16, right: 16, bottom: 6),
+      child: Row(
+        children: [
+          const SizedBox(width: 36 + 12),
+          const Expanded(flex: 3, child: _HeaderLabel('NAME')),
+          const Expanded(flex: 3, child: _HeaderLabel('EMAIL')),
+          const SizedBox(width: 120, child: _HeaderLabel('LAST SESSION')),
+          const SizedBox(width: 100, child: _HeaderLabel('STATUS')),
+          const SizedBox(width: _AccountRow.actionsWidth),
+        ],
+      ),
     );
   }
 
@@ -1020,12 +991,30 @@ class _AdminAccountsPageState extends State<AdminAccountsPage> {
   }
 }
 
+class _HeaderLabel extends StatelessWidget {
+  final String text;
+  const _HeaderLabel(this.text);
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: const TextStyle(
+        color: Colors.black38,
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 1,
+      ),
+    );
+  }
+}
+
 class _AccountRow extends StatelessWidget {
   final AdminAccountModel account;
   final bool isWide;
   final VoidCallback onDelete;
   final VoidCallback onBan;
   final VoidCallback onUnban;
+  static const double actionsWidth = 160.0;
   const _AccountRow({
     required this.account,
     required this.isWide,
@@ -1099,6 +1088,7 @@ class _AccountRow extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
         ),
+        SizedBox(width: 120, child: _lastSessionChip(account.lastSessionLabel)),
         SizedBox(
           width: 100,
           child: banned ? _banBadge(account.daysRemainingBan) : _activeBadge(),
@@ -1167,6 +1157,21 @@ class _AccountRow extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
         ],
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            const Icon(
+              Icons.access_time_rounded,
+              size: 12,
+              color: Colors.black38,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              account.lastSessionLabel,
+              style: const TextStyle(color: Colors.black45, fontSize: 11),
+            ),
+          ],
+        ),
         const SizedBox(height: 10),
         Row(
           mainAxisAlignment: MainAxisAlignment.end,
@@ -1235,6 +1240,42 @@ class _AccountRow extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _lastSessionChip(String label) {
+    final isToday = label == 'Today';
+    final isNever = label == 'Never';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: isNever
+            ? const Color(0xFFF5F5F5)
+            : isToday
+            ? const Color(0xFFE3F2FD)
+            : const Color(0xFFF3F3F3),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: isNever
+              ? const Color(0xFFE0E0E0)
+              : isToday
+              ? const Color(0xFF90CAF9)
+              : const Color(0xFFE0E0E0),
+        ),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: isNever
+              ? Colors.black38
+              : isToday
+              ? const Color(0xFF1565C0)
+              : Colors.black54,
+          fontSize: 11,
+          fontWeight: isToday ? FontWeight.w600 : FontWeight.normal,
+        ),
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }

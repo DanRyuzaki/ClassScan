@@ -13,6 +13,7 @@ class AdminAccountModel {
   final bool isBanned;
   final DateTime? bannedUntil;
   final String? banReason;
+  final DateTime? lastSession;
   AdminAccountModel({
     required this.uid,
     required this.firstName,
@@ -24,6 +25,7 @@ class AdminAccountModel {
     required this.isBanned,
     this.bannedUntil,
     this.banReason,
+    this.lastSession,
   });
   String get displayName => [
     firstName,
@@ -42,9 +44,25 @@ class AdminAccountModel {
     return remaining < 0 ? 0 : remaining + 1;
   }
 
+  String get lastSessionLabel {
+    if (lastSession == null) return 'Never';
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final sessionDay = DateTime(
+      lastSession!.year,
+      lastSession!.month,
+      lastSession!.day,
+    );
+    final diff = today.difference(sessionDay).inDays;
+    if (diff == 0) return 'Today';
+    if (diff == 1) return 'Yesterday';
+    return '$diff days ago';
+  }
+
   factory AdminAccountModel.fromDoc(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     final bannedUntilTs = data['bannedUntil'] as Timestamp?;
+    final lastSessionTs = data['lastSession'] as Timestamp?;
     return AdminAccountModel(
       uid: doc.id,
       firstName: data['firstName'] ?? '',
@@ -56,6 +74,7 @@ class AdminAccountModel {
       isBanned: data['isBanned'] ?? false,
       bannedUntil: bannedUntilTs?.toDate(),
       banReason: data['banReason'] as String?,
+      lastSession: lastSessionTs?.toDate(),
     );
   }
 }

@@ -273,6 +273,16 @@ class KioskController extends ChangeNotifier {
     }
   }
 
+  Future<void> _updateLastSession(String uid) async {
+    try {
+      await _db.collection('users').doc(uid).update({
+        'lastSession': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      debugPrint('_updateLastSession error for $uid: $e');
+    }
+  }
+
   Future<void> _handleTeacherScan(KioskUser teacher, List<String> parts) async {
     if (_classTeacherId == null) {
       showToast(
@@ -333,6 +343,7 @@ class KioskController extends ChangeNotifier {
         'verifiedAt': FieldValue.serverTimestamp(),
       });
     }
+    _updateLastSession(teacher.uid);
     showToast(
       KioskToast(
         title: 'Teacher QR Scanned',
@@ -507,6 +518,7 @@ class KioskController extends ChangeNotifier {
           'status': timeOutStatus,
           'source': 'kiosk',
         });
+        _updateLastSession(student.uid);
         _timeInLog.remove(student.uid);
         _timedOutLog.add(student.uid);
         if (_scannedStudents.containsKey(student.uid)) {
@@ -540,6 +552,7 @@ class KioskController extends ChangeNotifier {
         'status': timeInStatus,
         'source': 'kiosk',
       });
+      _updateLastSession(student.uid);
       showToast(
         KioskToast(
           title: 'Time In Logged',
