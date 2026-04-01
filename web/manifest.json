@@ -6,7 +6,7 @@
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
     "description": "A web-based QR Classroom Attendance System built with Flutter, integrating Firebase Authentication, Cloud Firestore, and real-time QR scanning for efficient attendance tracking.",
-    "orientation": "portrait-primary",
+    "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
         {
