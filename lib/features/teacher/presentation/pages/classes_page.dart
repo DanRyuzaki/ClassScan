@@ -280,7 +280,8 @@ class _ClassesPageState extends State<ClassesPage> {
     );
   }
 
-  void _showSettingsDialog(ClassModel cls) {
+ // ignore: slash_for_doc_comments
+ /**  void _showSettingsDialog(ClassModel cls) {
     int onTimeVal = cls.attendanceSettings.onTimeMinutes;
     int cooldownVal = cls.attendanceSettings.scanCooldownSeconds;
     int timeOutMinVal = cls.attendanceSettings.timeOutMinimumMinutes;
@@ -456,7 +457,8 @@ class _ClassesPageState extends State<ClassesPage> {
       ),
     );
   }
-
+ */
+ 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -721,11 +723,7 @@ class _ClassesPageState extends State<ClassesPage> {
               ],
             ),
           ),
-          GestureDetector(
-            onTap: () => _showSettingsDialog(cls),
-            child: MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: Container(
+      Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -763,25 +761,9 @@ class _ClassesPageState extends State<ClassesPage> {
                       const Color(0xFF43A047),
                     ),
                     const Spacer(),
-                    Text(
-                      'Edit',
-                      style: TextStyle(
-                        color: const Color(0xFF5A8A00),
-                        fontSize: _fs(context, 0.010),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    HugeIcon(
-                      icon: HugeIcons.strokeRoundedArrowRight01,
-                      color: const Color(0xFF5A8A00),
-                      size: 12,
-                    ),
                   ],
                 ),
               ),
-            ),
-          ),
         ],
       ),
     );
@@ -2121,3 +2103,4 @@ class _SecondPicker extends StatelessWidget {
     );
   }
 }
+

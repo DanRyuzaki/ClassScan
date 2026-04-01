@@ -748,12 +748,12 @@ class _AdminAdminsPageState extends State<AdminAdminsPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (_isWide)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 6),
+          const Padding(
+            padding: EdgeInsets.only(bottom: 6),
             child: Row(
               children: [
-                SizedBox(width: _w(0.025, min: 16)),
-                const Expanded(
+                SizedBox(width: 48),
+                Expanded(
                   flex: 3,
                   child: Text(
                     'NAME',
@@ -765,7 +765,7 @@ class _AdminAdminsPageState extends State<AdminAdminsPage> {
                     ),
                   ),
                 ),
-                const Expanded(
+                Expanded(
                   flex: 3,
                   child: Text(
                     'EMAIL',
@@ -777,7 +777,7 @@ class _AdminAdminsPageState extends State<AdminAdminsPage> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 16),
+                SizedBox(width: 180),
               ],
             ),
           ),
@@ -930,7 +930,12 @@ class _AdminRow extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
         ),
-        if (isSelf) _removeButton() else const SizedBox(width: 16),
+        SizedBox(
+          width: 180,
+          child: isSelf
+              ? Align(alignment: Alignment.centerRight, child: _removeButton())
+              : const SizedBox.shrink(),
+        ),
       ],
     );
   }

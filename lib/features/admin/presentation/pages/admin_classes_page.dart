@@ -564,12 +564,11 @@ class _AdminClassesPageState extends State<AdminClassesPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (_isWide)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 6),
+          const Padding(
+            padding: EdgeInsets.only(left: 16, right: 16, bottom: 6),
             child: Row(
               children: [
-                SizedBox(width: _w(0.025, min: 16)),
-                const Expanded(
+                Expanded(
                   flex: 3,
                   child: Text(
                     'SUBJECT',
@@ -581,7 +580,7 @@ class _AdminClassesPageState extends State<AdminClassesPage> {
                     ),
                   ),
                 ),
-                const Expanded(
+                Expanded(
                   flex: 2,
                   child: Text(
                     'TEACHER',
@@ -593,7 +592,7 @@ class _AdminClassesPageState extends State<AdminClassesPage> {
                     ),
                   ),
                 ),
-                const SizedBox(
+                SizedBox(
                   width: 80,
                   child: Text(
                     'MEMBERS',
@@ -605,7 +604,7 @@ class _AdminClassesPageState extends State<AdminClassesPage> {
                     ),
                   ),
                 ),
-                const SizedBox(
+                SizedBox(
                   width: 110,
                   child: Text(
                     'STATUS',
@@ -617,6 +616,7 @@ class _AdminClassesPageState extends State<AdminClassesPage> {
                     ),
                   ),
                 ),
+                SizedBox(width: 74),
               ],
             ),
           ),
