@@ -4,13 +4,11 @@ import 'package:toastification/toastification.dart';
 import '../../logic/classes_controller.dart';
 import '../widgets/shimmer_widgets.dart';
 import '../../../../core/controllers/dynamicsize_controller.dart';
-
 class ClassesPage extends StatefulWidget {
   const ClassesPage({super.key});
   @override
   State<ClassesPage> createState() => _ClassesPageState();
 }
-
 class _ClassesPageState extends State<ClassesPage> {
   final ClassesController controller = ClassesController();
   final TextEditingController _searchCtrl = TextEditingController();
@@ -40,14 +38,12 @@ class _ClassesPageState extends State<ClassesPage> {
     super.initState();
     _searchCtrl.addListener(() => controller.updateSearch(_searchCtrl.text));
   }
-
   @override
   void dispose() {
     controller.dispose();
     _searchCtrl.dispose();
     super.dispose();
   }
-
   void _toast({
     required String title,
     required String message,
@@ -77,13 +73,16 @@ class _ClassesPageState extends State<ClassesPage> {
       progressBarTheme: ProgressIndicatorThemeData(color: color),
     );
   }
-
   void _showClassDialog({ClassModel? existing}) {
     final schoolCtrl = TextEditingController(text: existing?.school ?? '');
     final codeCtrl = TextEditingController(text: existing?.classCode ?? '');
     final subjectCtrl = TextEditingController(
       text: existing?.subjectName ?? '',
     );
+    bool domainRestrictionEnabled = false;
+    final List<String> allowedDomains = [];
+    final domainInputCtrl = TextEditingController();
+    String? domainInputError;
     String? errorMsg;
     bool isSaving = false;
     showDialog(
@@ -113,8 +112,8 @@ class _ClassesPageState extends State<ClassesPage> {
               ),
             ],
           ),
-          content: SizedBox(
-            width: double.infinity,
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -155,6 +154,43 @@ class _ClassesPageState extends State<ClassesPage> {
                   label: 'Subject Name',
                   icon: HugeIcons.strokeRoundedBook01,
                 ),
+                if (existing == null) ...[
+                  const SizedBox(height: 16),
+                  const Divider(color: Color(0xFFEEEEEE)),
+                  const SizedBox(height: 12),
+                  _DomainRestrictionSection(
+                    enabled: domainRestrictionEnabled,
+                    domains: allowedDomains,
+                    inputCtrl: domainInputCtrl,
+                    inputError: domainInputError,
+                    onToggle: (v) => setDS(() {
+                      domainRestrictionEnabled = v;
+                      if (!v) allowedDomains.clear();
+                      domainInputError = null;
+                    }),
+                    onAddDomain: () {
+                      final raw = domainInputCtrl.text;
+                      final err = ClassesController.validateEmailDomain(raw);
+                      if (err != null) {
+                        setDS(() => domainInputError = err);
+                        return;
+                      }
+                      final normalized = raw.trim().toLowerCase();
+                      if (allowedDomains.contains(normalized)) {
+                        setDS(() => domainInputError = 'Domain already added.');
+                        return;
+                      }
+                      setDS(() {
+                        allowedDomains.add(normalized);
+                        domainInputCtrl.clear();
+                        domainInputError = null;
+                      });
+                    },
+                    onRemoveDomain: (d) =>
+                        setDS(() => allowedDomains.remove(d)),
+                    isCreating: true,
+                  ),
+                ],
               ],
             ),
           ),
@@ -173,11 +209,16 @@ class _ClassesPageState extends State<ClassesPage> {
                   isSaving = true;
                   errorMsg = null;
                 });
+                final domainsToSave =
+                    (existing == null && domainRestrictionEnabled)
+                    ? List<String>.from(allowedDomains)
+                    : <String>[];
                 final error = existing == null
                     ? await controller.createClass(
                         school: schoolCtrl.text,
                         classCode: codeCtrl.text,
                         subjectName: subjectCtrl.text,
+                        allowedEmailDomains: domainsToSave,
                       )
                     : await controller.updateClass(
                         classId: existing.id,
@@ -205,7 +246,6 @@ class _ClassesPageState extends State<ClassesPage> {
       ),
     );
   }
-
   void _showDeleteDialog(ClassModel cls) {
     showDialog(
       context: context,
@@ -270,7 +310,6 @@ class _ClassesPageState extends State<ClassesPage> {
       ),
     );
   }
-
   void _showClassDetailDialog(ClassModel cls) {
     showDialog(
       context: context,
@@ -279,9 +318,7 @@ class _ClassesPageState extends State<ClassesPage> {
           _ClassDetailDialog(cls: cls, controller: controller, onToast: _toast),
     );
   }
-
- // ignore: slash_for_doc_comments
- /**  void _showSettingsDialog(ClassModel cls) {
+  void _showSettingsDialog(ClassModel cls) {
     int onTimeVal = cls.attendanceSettings.onTimeMinutes;
     int cooldownVal = cls.attendanceSettings.scanCooldownSeconds;
     int timeOutMinVal = cls.attendanceSettings.timeOutMinimumMinutes;
@@ -328,8 +365,8 @@ class _ClassesPageState extends State<ClassesPage> {
               ),
             ],
           ),
-          content: SizedBox(
-            width: double.infinity,
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -457,8 +494,6 @@ class _ClassesPageState extends State<ClassesPage> {
       ),
     );
   }
- */
- 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -532,7 +567,6 @@ class _ClassesPageState extends State<ClassesPage> {
       },
     );
   }
-
   Widget _buildTopBar(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 700;
     return Padding(
@@ -609,7 +643,6 @@ class _ClassesPageState extends State<ClassesPage> {
       ),
     );
   }
-
   Widget _buildList(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 700;
     return ListView.builder(
@@ -620,11 +653,11 @@ class _ClassesPageState extends State<ClassesPage> {
       itemBuilder: (_, i) => _buildClassCard(context, controller.classes[i]),
     );
   }
-
   Widget _buildClassCard(BuildContext context, ClassModel cls) {
     final pendingCount = cls.pendingStudents.length;
     final enrolledCount = cls.enrolledStudents.length;
     final settings = cls.attendanceSettings;
+    final hasDomainRestriction = cls.allowedEmailDomains.isNotEmpty;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -673,15 +706,56 @@ class _ClassesPageState extends State<ClassesPage> {
                         ),
                       ),
                       const SizedBox(height: 2),
-                      Text(
-                        '${cls.school}  ·  ${cls.classCode}',
-                        style: TextStyle(
-                          color: Colors.black45,
-                          fontSize: MediaQuery.of(context).size.width < 700
-                              ? 11
-                              : _fs(context, 0.011),
-                        ),
-                        overflow: TextOverflow.ellipsis,
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              '${cls.school}  ·  ${cls.classCode}',
+                              style: TextStyle(
+                                color: Colors.black45,
+                                fontSize:
+                                    MediaQuery.of(context).size.width < 700
+                                    ? 11
+                                    : _fs(context, 0.011),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (hasDomainRestriction) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(
+                                  0xFF1565C0,
+                                ).withValues(alpha: 0.10),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  HugeIcon(
+                                    icon: HugeIcons.strokeRoundedMail01,
+                                    color: const Color(0xFF1565C0),
+                                    size: 11,
+                                  ),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    'Domain restricted',
+                                    style: const TextStyle(
+                                      color: Color(0xFF1565C0),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ],
                   ),
@@ -723,7 +797,11 @@ class _ClassesPageState extends State<ClassesPage> {
               ],
             ),
           ),
-      Container(
+          GestureDetector(
+            onTap: () => _showSettingsDialog(cls),
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -761,14 +839,29 @@ class _ClassesPageState extends State<ClassesPage> {
                       const Color(0xFF43A047),
                     ),
                     const Spacer(),
+                    Text(
+                      'Edit',
+                      style: TextStyle(
+                        color: const Color(0xFF5A8A00),
+                        fontSize: _fs(context, 0.010),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    HugeIcon(
+                      icon: HugeIcons.strokeRoundedArrowRight01,
+                      color: const Color(0xFF5A8A00),
+                      size: 12,
+                    ),
                   ],
                 ),
               ),
+            ),
+          ),
         ],
       ),
     );
   }
-
   Widget _chip(String label, Color bg, Color fg) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -782,7 +875,6 @@ class _ClassesPageState extends State<ClassesPage> {
       ),
     );
   }
-
   Widget _thresholdLabel(String text, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
@@ -800,7 +892,6 @@ class _ClassesPageState extends State<ClassesPage> {
       ),
     );
   }
-
   Widget _iconBtn({
     required List<List<dynamic>> icon,
     required String tooltip,
@@ -826,7 +917,6 @@ class _ClassesPageState extends State<ClassesPage> {
       ),
     );
   }
-
   Widget _dialogField({
     required TextEditingController ctrl,
     required String label,
@@ -866,7 +956,6 @@ class _ClassesPageState extends State<ClassesPage> {
       ),
     );
   }
-
   Widget _gradientButton({
     required String label,
     required bool loading,
@@ -907,7 +996,6 @@ class _ClassesPageState extends State<ClassesPage> {
       ),
     );
   }
-
   Widget _buildEmptyState(BuildContext context) {
     return Center(
       child: Column(
@@ -937,7 +1025,308 @@ class _ClassesPageState extends State<ClassesPage> {
     );
   }
 }
-
+class _DomainRestrictionSection extends StatelessWidget {
+  final bool enabled;
+  final List<String> domains;
+  final TextEditingController inputCtrl;
+  final String? inputError;
+  final ValueChanged<bool> onToggle;
+  final VoidCallback onAddDomain;
+  final void Function(String domain) onRemoveDomain;
+  final bool isCreating;
+  const _DomainRestrictionSection({
+    required this.enabled,
+    required this.domains,
+    required this.inputCtrl,
+    required this.inputError,
+    required this.onToggle,
+    required this.onAddDomain,
+    required this.onRemoveDomain,
+    this.isCreating = false,
+  });
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 10,
+              height: 10,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Color(0xFF1565C0),
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Email Domain Restriction',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  Text(
+                    'Only students with an allowed email domain can join.',
+                    style: TextStyle(color: Colors.black45, fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+            if (isCreating)
+              GestureDetector(
+                onTap: () => onToggle(!enabled),
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: 42,
+                    height: 24,
+                    padding: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      color: enabled
+                          ? const Color(0xFF1565C0)
+                          : const Color(0xFFE0E0E0),
+                    ),
+                    child: AnimatedAlign(
+                      duration: const Duration(milliseconds: 200),
+                      alignment: enabled
+                          ? Alignment.centerRight
+                          : Alignment.centerLeft,
+                      child: Container(
+                        width: 18,
+                        height: 18,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              )
+            else
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1565C0).withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Text(
+                  'Enabled',
+                  style: TextStyle(
+                    color: Color(0xFF1565C0),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        if (enabled || !isCreating) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE3F2FD),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: const Color(0xFF1565C0).withValues(alpha: 0.25),
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(
+                  Icons.info_outline_rounded,
+                  color: Color(0xFF1565C0),
+                  size: 14,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    isCreating
+                        ? 'Any student whose email does not end with one of '
+                              'the domains below will be rejected when trying to '
+                              'join this class by code. The teacher\'s manual '
+                              'enroll-by-email also enforces this restriction.'
+                        : 'Students must use one of the listed email domains '
+                              'to join. You can add or remove domains. '
+                              'Removing a domain does not unenroll current students.',
+                    style: const TextStyle(
+                      color: Color(0xFF0D47A1),
+                      fontSize: 11,
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: inputCtrl,
+                      style: const TextStyle(fontSize: 13),
+                      decoration: InputDecoration(
+                        hintText: 'e.g. fatima.edu.ph',
+                        hintStyle: const TextStyle(
+                          color: Colors.black38,
+                          fontSize: 13,
+                        ),
+                        filled: true,
+                        fillColor: const Color(0xFFF5F5F5),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        prefixText: '@  ',
+                        prefixStyle: const TextStyle(
+                          color: Colors.black45,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE0E0E0),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE0E0E0),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF1565C0),
+                            width: 2,
+                          ),
+                        ),
+                        errorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE53935),
+                          ),
+                        ),
+                      ),
+                      onSubmitted: (_) => onAddDomain(),
+                    ),
+                    if (inputError != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        inputError!,
+                        style: const TextStyle(
+                          color: Color(0xFFE53935),
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: onAddDomain,
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1565C0),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.add_rounded,
+                      color: Colors.white,
+                      size: 18,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (domains.isEmpty)
+            const Text(
+              'No domains added yet. Add at least one to restrict access.',
+              style: TextStyle(color: Colors.black38, fontSize: 11),
+            )
+          else
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: domains.map((d) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1565C0).withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: const Color(0xFF1565C0).withValues(alpha: 0.30),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.alternate_email_rounded,
+                        color: Color(0xFF1565C0),
+                        size: 12,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        d,
+                        style: const TextStyle(
+                          color: Color(0xFF1565C0),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      ...[
+                        const SizedBox(width: 6),
+                        GestureDetector(
+                          onTap: () => onRemoveDomain(d),
+                          child: MouseRegion(
+                            cursor: SystemMouseCursors.click,
+                            child: Icon(
+                              Icons.close_rounded,
+                              color: isCreating
+                                  ? const Color(0xFF1565C0)
+                                  : const Color(0xFFE53935),
+                              size: 13,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+        ],
+      ],
+    );
+  }
+}
 class _ClassDetailDialog extends StatefulWidget {
   final ClassModel cls;
   final ClassesController controller;
@@ -955,7 +1344,6 @@ class _ClassDetailDialog extends StatefulWidget {
   @override
   State<_ClassDetailDialog> createState() => _ClassDetailDialogState();
 }
-
 class _ClassDetailDialogState extends State<_ClassDetailDialog>
     with SingleTickerProviderStateMixin {
   late TabController _tabs;
@@ -965,6 +1353,10 @@ class _ClassDetailDialogState extends State<_ClassDetailDialog>
   final TextEditingController _emailCtrl = TextEditingController();
   bool _enrolling = false;
   String? _enrollError;
+  late List<String> _currentDomains;
+  final TextEditingController _domainInputCtrl = TextEditingController();
+  String? _domainInputError;
+  bool _savingDomain = false;
   late int _onTimeMinutes;
   late int _scanCooldownSeconds;
   late int _timeOutMinimumMinutes;
@@ -983,16 +1375,16 @@ class _ClassDetailDialogState extends State<_ClassDetailDialog>
         widget.cls.attendanceSettings.timeOutMinimumMinutes;
     _locationValidation = widget.cls.attendanceSettings.locationValidation;
     _proximityThreshold = widget.cls.attendanceSettings.proximityThreshold;
+    _currentDomains = List<String>.from(widget.cls.allowedEmailDomains);
     _loadStudents();
   }
-
   @override
   void dispose() {
     _tabs.dispose();
     _emailCtrl.dispose();
+    _domainInputCtrl.dispose();
     super.dispose();
   }
-
   Future<void> _loadStudents() async {
     setState(() => _loadingStudents = true);
     final freshClass = await widget.controller.fetchClassDoc(widget.cls.id);
@@ -1000,6 +1392,9 @@ class _ClassDetailDialogState extends State<_ClassDetailDialog>
         freshClass?.enrolledStudents ?? widget.cls.enrolledStudents;
     final pendingUIDs =
         freshClass?.pendingStudents ?? widget.cls.pendingStudents;
+    if (freshClass != null) {
+      _currentDomains = List<String>.from(freshClass.allowedEmailDomains);
+    }
     final enrolled = await widget.controller.fetchEnrolledStudents(
       enrolledUIDs,
     );
@@ -1012,7 +1407,6 @@ class _ClassDetailDialogState extends State<_ClassDetailDialog>
       });
     }
   }
-
   Future<void> _enrollByEmail() async {
     setState(() {
       _enrolling = true;
@@ -1036,7 +1430,253 @@ class _ClassDetailDialogState extends State<_ClassDetailDialog>
       });
     }
   }
-
+  Future<void> _addDomain() async {
+    final raw = _domainInputCtrl.text;
+    final validationErr = ClassesController.validateEmailDomain(raw);
+    if (validationErr != null) {
+      setState(() => _domainInputError = validationErr);
+      return;
+    }
+    final normalized = raw.trim().toLowerCase();
+    if (_currentDomains.contains(normalized)) {
+      setState(() => _domainInputError = 'Domain already added.');
+      return;
+    }
+    setState(() {
+      _savingDomain = true;
+      _domainInputError = null;
+    });
+    final error = await widget.controller.addAllowedDomain(
+      classId: widget.cls.id,
+      domain: normalized,
+    );
+    if (!mounted) return;
+    if (error == null) {
+      _domainInputCtrl.clear();
+      await _loadStudents();
+      if (!mounted) return;
+      setState(() => _savingDomain = false);
+      widget.onToast(
+        title: 'Domain Added',
+        message: '@$normalized has been added to the allowed list.',
+      );
+    } else {
+      setState(() {
+        _savingDomain = false;
+        _domainInputError = error;
+      });
+    }
+  }
+  Future<void> _showRemoveDomainDialog(String domain) async {
+    final affectedCount = await widget.controller.countStudentsWithDomain(
+      classId: widget.cls.id,
+      domain: domain,
+    );
+    if (!mounted) return;
+    final confirmCtrl = TextEditingController();
+    bool removing = false;
+    String? inputError;
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setDS) => AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          icon: const Icon(
+            Icons.alternate_email_rounded,
+            color: Color(0xFFE53935),
+            size: 32,
+          ),
+          title: Text(
+            'Remove @$domain?',
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          content: SizedBox(
+            width: 380,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF8E1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFFFE082)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.info_outline_rounded,
+                            color: Color(0xFFF57F17),
+                            size: 14,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            affectedCount == 0
+                                ? 'No enrolled students use this domain.'
+                                : 'This affects $affectedCount currently '
+                                      'enrolled student${affectedCount == 1 ? '' : 's'} ',
+                            style: const TextStyle(
+                              color: Color(0xFF5D4037),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      const Text(
+                        'Already-enrolled students will NOT be removed — '
+                        'they can still access the class normally. '
+                        'However, no new students with this domain will '
+                        'be able to join going forward.',
+                        style: TextStyle(
+                          color: Color(0xFF5D4037),
+                          fontSize: 11,
+                          height: 1.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Type DELETE to confirm:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: confirmCtrl,
+                  autofocus: true,
+                  style: const TextStyle(fontSize: 14),
+                  onChanged: (_) {
+                    if (inputError != null) setDS(() => inputError = null);
+                  },
+                  decoration: InputDecoration(
+                    hintText: 'DELETE',
+                    hintStyle: const TextStyle(
+                      color: Colors.black26,
+                      fontSize: 13,
+                    ),
+                    errorText: inputError,
+                    filled: true,
+                    fillColor: const Color(0xFFF5F5F5),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(
+                        color: Color(0xFFE53935),
+                        width: 1.5,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actionsAlignment: MainAxisAlignment.end,
+          actions: [
+            TextButton(
+              onPressed: removing ? null : () => Navigator.of(ctx).pop(),
+              style: TextButton.styleFrom(foregroundColor: Colors.black45),
+              child: const Text('Cancel'),
+            ),
+            GestureDetector(
+              onTap: removing
+                  ? null
+                  : () async {
+                      if (confirmCtrl.text.trim() != 'DELETE') {
+                        setDS(
+                          () => inputError =
+                              'Type DELETE (in capitals) to confirm.',
+                        );
+                        return;
+                      }
+                      setDS(() => removing = true);
+                      final error = await widget.controller.removeAllowedDomain(
+                        classId: widget.cls.id,
+                        domain: domain,
+                      );
+                      if (!ctx.mounted) return;
+                      Navigator.of(ctx).pop();
+                      if (error != null) {
+                        widget.onToast(
+                          title: 'Error',
+                          message: error,
+                          isError: true,
+                        );
+                      } else {
+                        await _loadStudents();
+                        if (!mounted) return;
+                        widget.onToast(
+                          title: 'Domain Removed',
+                          message:
+                              '@$domain has been removed. '
+                              'Existing students are unaffected.',
+                        );
+                      }
+                    },
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 150),
+                opacity: removing ? 0.5 : 1.0,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE53935),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: removing
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          'Remove Domain',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
   Future<void> _saveSettings() async {
     setState(() {
       _savingSettings = true;
@@ -1062,7 +1702,6 @@ class _ClassDetailDialogState extends State<_ClassDetailDialog>
       });
     }
   }
-
   @override
   Widget build(BuildContext context) {
     return Dialog(
@@ -1073,8 +1712,8 @@ class _ClassDetailDialogState extends State<_ClassDetailDialog>
             ? MediaQuery.of(context).size.width * 0.92
             : 520,
         height: MediaQuery.of(context).size.width < 700
-            ? MediaQuery.of(context).size.height * 0.80
-            : 560,
+            ? MediaQuery.of(context).size.height * 0.85
+            : 600,
         child: Column(
           children: [
             Container(
@@ -1146,7 +1785,6 @@ class _ClassDetailDialogState extends State<_ClassDetailDialog>
       ),
     );
   }
-
   Widget _buildStudentsTab() {
     if (_loadingStudents) {
       return const Center(
@@ -1156,6 +1794,27 @@ class _ClassDetailDialogState extends State<_ClassDetailDialog>
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        _DomainRestrictionSection(
+          enabled: _currentDomains.isNotEmpty,
+          domains: _currentDomains,
+          inputCtrl: _domainInputCtrl,
+          inputError: _domainInputError,
+          onToggle: (_) {},
+          onAddDomain: _savingDomain ? () {} : _addDomain,
+          onRemoveDomain: _showRemoveDomainDialog,
+          isCreating: false,
+        ),
+        if (_savingDomain)
+          const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: LinearProgressIndicator(
+              color: Color(0xFF1565C0),
+              backgroundColor: Color(0xFFE3F2FD),
+            ),
+          ),
+        const SizedBox(height: 20),
+        const Divider(color: Color(0xFFEEEEEE)),
+        const SizedBox(height: 16),
         const Text(
           'Enroll by Email',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
@@ -1299,7 +1958,6 @@ class _ClassDetailDialogState extends State<_ClassDetailDialog>
       ],
     );
   }
-
   Widget _pendingRow(EnrolledStudent s) {
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
@@ -1408,7 +2066,6 @@ class _ClassDetailDialogState extends State<_ClassDetailDialog>
       ),
     );
   }
-
   Widget _enrolledRow(EnrolledStudent s) {
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
@@ -1476,7 +2133,6 @@ class _ClassDetailDialogState extends State<_ClassDetailDialog>
       ),
     );
   }
-
   Widget _buildSettingsTab() {
     return ListView(
       padding: const EdgeInsets.all(20),
@@ -1629,7 +2285,6 @@ class _ClassDetailDialogState extends State<_ClassDetailDialog>
     );
   }
 }
-
 class _MinutePicker extends StatelessWidget {
   final String label;
   final String sublabel;
@@ -1744,7 +2399,6 @@ class _MinutePicker extends StatelessWidget {
     );
   }
 }
-
 class _LocationValidationToggle extends StatelessWidget {
   final bool value;
   final int proximityThreshold;
@@ -1873,7 +2527,6 @@ class _LocationValidationToggle extends StatelessWidget {
     );
   }
 }
-
 class _MeterPicker extends StatelessWidget {
   final String label;
   final String sublabel;
@@ -1988,7 +2641,6 @@ class _MeterPicker extends StatelessWidget {
     );
   }
 }
-
 class _SecondPicker extends StatelessWidget {
   final String label;
   final String sublabel;
@@ -2103,4 +2755,3 @@ class _SecondPicker extends StatelessWidget {
     );
   }
 }
-

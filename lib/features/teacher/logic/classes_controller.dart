@@ -49,6 +49,7 @@ class ClassModel {
   final List<String> enrolledStudents;
   final List<String> pendingStudents;
   final AttendanceSettings attendanceSettings;
+  final List<String> allowedEmailDomains;
   ClassModel({
     required this.id,
     required this.school,
@@ -58,6 +59,7 @@ class ClassModel {
     required this.enrolledStudents,
     this.pendingStudents = const [],
     AttendanceSettings? attendanceSettings,
+    this.allowedEmailDomains = const [],
   }) : attendanceSettings = attendanceSettings ?? const AttendanceSettings();
   factory ClassModel.fromDoc(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
@@ -73,6 +75,7 @@ class ClassModel {
       attendanceSettings: settingsMap != null
           ? AttendanceSettings.fromMap(settingsMap)
           : const AttendanceSettings(),
+      allowedEmailDomains: List<String>.from(data['allowedEmailDomains'] ?? []),
     );
   }
   Map<String, dynamic> toMap() => {
@@ -83,7 +86,13 @@ class ClassModel {
     'enrolledStudents': enrolledStudents,
     'pendingStudents': pendingStudents,
     'attendanceSettings': attendanceSettings.toMap(),
+    'allowedEmailDomains': allowedEmailDomains,
   };
+  bool isEmailAllowed(String email) {
+    if (allowedEmailDomains.isEmpty) return true;
+    final lower = email.trim().toLowerCase();
+    return allowedEmailDomains.any((domain) => lower.endsWith('@$domain'));
+  }
 }
 
 class EnrolledStudent {
@@ -165,6 +174,21 @@ class ClassesController extends ChangeNotifier {
     return null;
   }
 
+  static String? validateEmailDomain(String value) {
+    final trimmed = value.trim().toLowerCase();
+    if (trimmed.isEmpty) return 'Domain cannot be empty.';
+    if (trimmed.contains('@')) return 'Enter the domain only, without "@".';
+    final domainRegex = RegExp(
+      r'^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?'
+      r'(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*'
+      r'\.[a-zA-Z]{2,}$',
+    );
+    if (!domainRegex.hasMatch(trimmed)) {
+      return 'Invalid domain format (e.g. fatima.edu.ph).';
+    }
+    return null;
+  }
+
   Future<bool> classCodeExists(String code, {String? excludeId}) async {
     final doc = await _db.collection('classes').doc(code.trim()).get();
     if (!doc.exists) return false;
@@ -176,6 +200,7 @@ class ClassesController extends ChangeNotifier {
     required String school,
     required String classCode,
     required String subjectName,
+    List<String> allowedEmailDomains = const [],
   }) async {
     final codeError = validateClassCode(classCode);
     if (codeError != null) return codeError;
@@ -193,6 +218,9 @@ class ClassesController extends ChangeNotifier {
         'subjectName': subjectName.trim(),
         'teacherID': _teacherID,
         'enrolledStudents': [],
+        'allowedEmailDomains': allowedEmailDomains
+            .map((d) => d.trim().toLowerCase())
+            .toList(),
       });
       await loadClasses();
       return null;
@@ -235,6 +263,7 @@ class ClassesController extends ChangeNotifier {
           'pendingStudents': oldData['pendingStudents'] ?? [],
           if (oldData['attendanceSettings'] != null)
             'attendanceSettings': oldData['attendanceSettings'],
+          'allowedEmailDomains': oldData['allowedEmailDomains'] ?? [],
         });
         final sessionsSnap = await _db
             .collection('sessions')
@@ -268,6 +297,78 @@ class ClassesController extends ChangeNotifier {
     }
   }
 
+  Future<String?> addAllowedDomain({
+    required String classId,
+    required String domain,
+  }) async {
+    final error = validateEmailDomain(domain);
+    if (error != null) return error;
+    final normalized = domain.trim().toLowerCase();
+    try {
+      await _db.collection('classes').doc(classId).update({
+        'allowedEmailDomains': FieldValue.arrayUnion([normalized]),
+      });
+      await loadClasses();
+      return null;
+    } catch (e) {
+      debugPrint('addAllowedDomain error: $e');
+      return 'Failed to add domain. Please try again.';
+    }
+  }
+
+  Future<int> countStudentsWithDomain({
+    required String classId,
+    required String domain,
+  }) async {
+    try {
+      final classDoc = await _db.collection('classes').doc(classId).get();
+      if (!classDoc.exists) return 0;
+      final enrolledUIDs = List<String>.from(
+        classDoc.data()?['enrolledStudents'] ?? [],
+      );
+      if (enrolledUIDs.isEmpty) return 0;
+      int count = 0;
+      final suffix = '@${domain.trim().toLowerCase()}';
+      for (var i = 0; i < enrolledUIDs.length; i += 30) {
+        final chunk = enrolledUIDs.sublist(
+          i,
+          (i + 30).clamp(0, enrolledUIDs.length),
+        );
+        final snap = await _db
+            .collection('users')
+            .where(FieldPath.documentId, whereIn: chunk)
+            .get();
+        for (final doc in snap.docs) {
+          final email = (doc.data()['email'] as String? ?? '')
+              .trim()
+              .toLowerCase();
+          if (email.endsWith(suffix)) count++;
+        }
+      }
+      return count;
+    } catch (e) {
+      debugPrint('countStudentsWithDomain error: $e');
+      return 0;
+    }
+  }
+
+  Future<String?> removeAllowedDomain({
+    required String classId,
+    required String domain,
+  }) async {
+    final normalized = domain.trim().toLowerCase();
+    try {
+      await _db.collection('classes').doc(classId).update({
+        'allowedEmailDomains': FieldValue.arrayRemove([normalized]),
+      });
+      await loadClasses();
+      return null;
+    } catch (e) {
+      debugPrint('removeAllowedDomain error: $e');
+      return 'Failed to remove domain. Please try again.';
+    }
+  }
+
   Future<String?> enrollStudentByEmail({
     required String classId,
     required String email,
@@ -287,14 +388,26 @@ class ClassesController extends ChangeNotifier {
       if (data['role'] != 'student') {
         return 'This account is not registered as a student.';
       }
-      final studentUID = studentDoc.id;
       final classDoc = await _db.collection('classes').doc(classId).get();
-      final enrolled = List<String>.from(
-        classDoc.data()?['enrolledStudents'] ?? [],
+      if (!classDoc.exists) return 'Class not found.';
+      final classData = classDoc.data()!;
+      final allowedDomains = List<String>.from(
+        classData['allowedEmailDomains'] ?? [],
       );
-      final pending = List<String>.from(
-        classDoc.data()?['pendingStudents'] ?? [],
-      );
+      if (allowedDomains.isNotEmpty) {
+        final emailLower = email.trim().toLowerCase();
+        final domainAllowed = allowedDomains.any(
+          (d) => emailLower.endsWith('@$d'),
+        );
+        if (!domainAllowed) {
+          final domainList = allowedDomains.join(', ');
+          return 'This class only allows email addresses from: $domainList. '
+              '"$email" does not match any allowed domain.';
+        }
+      }
+      final enrolled = List<String>.from(classData['enrolledStudents'] ?? []);
+      final pending = List<String>.from(classData['pendingStudents'] ?? []);
+      final studentUID = studentDoc.id;
       if (enrolled.contains(studentUID)) {
         return 'This student is already enrolled in this class.';
       }

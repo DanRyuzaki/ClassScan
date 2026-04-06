@@ -124,6 +124,23 @@ class StudentClassesController extends ChangeNotifier {
         return 'No class found with code "$classCode".';
       }
       final data = doc.data()!;
+      final allowedDomains = List<String>.from(
+        data['allowedEmailDomains'] ?? [],
+      );
+      if (allowedDomains.isNotEmpty) {
+        final userDoc = await _db.collection('users').doc(_uid).get();
+        final studentEmail = (userDoc.data()?['email'] as String? ?? '')
+            .trim()
+            .toLowerCase();
+        final domainAllowed = allowedDomains.any(
+          (d) => studentEmail.endsWith('@$d'),
+        );
+        if (!domainAllowed) {
+          final domainList = allowedDomains.join(', ');
+          return 'This class only accepts students with an email from: '
+              '$domainList. Your account ($studentEmail) does not qualify.';
+        }
+      }
       final enrolled = List<String>.from(data['enrolledStudents'] ?? []);
       final pending = List<String>.from(data['pendingStudents'] ?? []);
       if (enrolled.contains(_uid)) {
