@@ -367,8 +367,8 @@ class KioskController extends ChangeNotifier {
           KioskToast(
             title: 'Device Already Used',
             message:
-                'This device was already used to scan a different '
-                'student this session.',
+                'This device has already been used to scan a QR code'
+                'in this session.',
             isError: true,
           ),
         );
