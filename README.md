@@ -1,5 +1,7 @@
+![s0](./screenshots/0.png)
+
 # 📋 𝐂𝐋𝐀𝐒𝐒𝐒𝐂𝐀𝐍
-### *𝚠𝚑𝚎𝚛𝚎 𝚎𝚟𝚎𝚛𝚢 𝚜𝚌𝚊𝚗 𝚌𝚘𝚞𝚗𝚝𝚜, 𝚊𝚗𝚍 𝚎𝚟𝚎𝚛𝚢 𝚙𝚛𝚎𝚜𝚎𝚗𝚌𝚎 𝚖𝚊𝚝𝚝𝚎𝚛𝚜!*
+### *Effortless Attendance, Empowered Education.*
 
 [![Developed by SoliDeoCode](https://img.shields.io/badge/Developed%20by-SoliDeoCode-AEEA00.svg?style=for-the-badge&logoColor=black)](https://github.com/DanRyuzaki)
 [![Github Star](https://img.shields.io/github/stars/DanRyuzaki/ClassScan.svg?style=for-the-badge&color=AEEA00)](https://github.com/DanRyuzaki/ClassScan)
