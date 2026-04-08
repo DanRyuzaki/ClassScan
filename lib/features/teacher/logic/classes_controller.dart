@@ -441,6 +441,23 @@ class ClassesController extends ChangeNotifier {
     }
   }
 
+  Future<String?> removeStudents({
+    required String classId,
+    required List<String> studentUIDs,
+  }) async {
+    if (studentUIDs.isEmpty) return null;
+    try {
+      await _db.collection('classes').doc(classId).update({
+        'enrolledStudents': FieldValue.arrayRemove(studentUIDs),
+      });
+      await loadClasses();
+      return null;
+    } catch (e) {
+      debugPrint('removeStudents error: $e');
+      return 'Failed to remove students. Please try again.';
+    }
+  }
+
   Future<ClassModel?> fetchClassDoc(String classId) async {
     try {
       final doc = await _db.collection('classes').doc(classId).get();

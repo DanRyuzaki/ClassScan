@@ -4,11 +4,13 @@ import 'package:toastification/toastification.dart';
 import '../../logic/classes_controller.dart';
 import '../widgets/shimmer_widgets.dart';
 import '../../../../core/controllers/dynamicsize_controller.dart';
+
 class ClassesPage extends StatefulWidget {
   const ClassesPage({super.key});
   @override
   State<ClassesPage> createState() => _ClassesPageState();
 }
+
 class _ClassesPageState extends State<ClassesPage> {
   final ClassesController controller = ClassesController();
   final TextEditingController _searchCtrl = TextEditingController();
@@ -38,12 +40,14 @@ class _ClassesPageState extends State<ClassesPage> {
     super.initState();
     _searchCtrl.addListener(() => controller.updateSearch(_searchCtrl.text));
   }
+
   @override
   void dispose() {
     controller.dispose();
     _searchCtrl.dispose();
     super.dispose();
   }
+
   void _toast({
     required String title,
     required String message,
@@ -73,6 +77,7 @@ class _ClassesPageState extends State<ClassesPage> {
       progressBarTheme: ProgressIndicatorThemeData(color: color),
     );
   }
+
   void _showClassDialog({ClassModel? existing}) {
     final schoolCtrl = TextEditingController(text: existing?.school ?? '');
     final codeCtrl = TextEditingController(text: existing?.classCode ?? '');
@@ -246,6 +251,7 @@ class _ClassesPageState extends State<ClassesPage> {
       ),
     );
   }
+
   void _showDeleteDialog(ClassModel cls) {
     showDialog(
       context: context,
@@ -310,6 +316,7 @@ class _ClassesPageState extends State<ClassesPage> {
       ),
     );
   }
+
   void _showClassDetailDialog(ClassModel cls) {
     showDialog(
       context: context,
@@ -318,6 +325,7 @@ class _ClassesPageState extends State<ClassesPage> {
           _ClassDetailDialog(cls: cls, controller: controller, onToast: _toast),
     );
   }
+
   void _showSettingsDialog(ClassModel cls) {
     int onTimeVal = cls.attendanceSettings.onTimeMinutes;
     int cooldownVal = cls.attendanceSettings.scanCooldownSeconds;
@@ -494,6 +502,7 @@ class _ClassesPageState extends State<ClassesPage> {
       ),
     );
   }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -567,6 +576,7 @@ class _ClassesPageState extends State<ClassesPage> {
       },
     );
   }
+
   Widget _buildTopBar(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 700;
     return Padding(
@@ -643,6 +653,7 @@ class _ClassesPageState extends State<ClassesPage> {
       ),
     );
   }
+
   Widget _buildList(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 700;
     return ListView.builder(
@@ -653,6 +664,7 @@ class _ClassesPageState extends State<ClassesPage> {
       itemBuilder: (_, i) => _buildClassCard(context, controller.classes[i]),
     );
   }
+
   Widget _buildClassCard(BuildContext context, ClassModel cls) {
     final pendingCount = cls.pendingStudents.length;
     final enrolledCount = cls.enrolledStudents.length;
@@ -862,6 +874,7 @@ class _ClassesPageState extends State<ClassesPage> {
       ),
     );
   }
+
   Widget _chip(String label, Color bg, Color fg) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -875,6 +888,7 @@ class _ClassesPageState extends State<ClassesPage> {
       ),
     );
   }
+
   Widget _thresholdLabel(String text, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
@@ -892,6 +906,7 @@ class _ClassesPageState extends State<ClassesPage> {
       ),
     );
   }
+
   Widget _iconBtn({
     required List<List<dynamic>> icon,
     required String tooltip,
@@ -917,6 +932,7 @@ class _ClassesPageState extends State<ClassesPage> {
       ),
     );
   }
+
   Widget _dialogField({
     required TextEditingController ctrl,
     required String label,
@@ -956,6 +972,7 @@ class _ClassesPageState extends State<ClassesPage> {
       ),
     );
   }
+
   Widget _gradientButton({
     required String label,
     required bool loading,
@@ -996,6 +1013,7 @@ class _ClassesPageState extends State<ClassesPage> {
       ),
     );
   }
+
   Widget _buildEmptyState(BuildContext context) {
     return Center(
       child: Column(
@@ -1025,6 +1043,7 @@ class _ClassesPageState extends State<ClassesPage> {
     );
   }
 }
+
 class _DomainRestrictionSection extends StatelessWidget {
   final bool enabled;
   final List<String> domains;
@@ -1327,6 +1346,7 @@ class _DomainRestrictionSection extends StatelessWidget {
     );
   }
 }
+
 class _ClassDetailDialog extends StatefulWidget {
   final ClassModel cls;
   final ClassesController controller;
@@ -1344,6 +1364,7 @@ class _ClassDetailDialog extends StatefulWidget {
   @override
   State<_ClassDetailDialog> createState() => _ClassDetailDialogState();
 }
+
 class _ClassDetailDialogState extends State<_ClassDetailDialog>
     with SingleTickerProviderStateMixin {
   late TabController _tabs;
@@ -1357,6 +1378,9 @@ class _ClassDetailDialogState extends State<_ClassDetailDialog>
   final TextEditingController _domainInputCtrl = TextEditingController();
   String? _domainInputError;
   bool _savingDomain = false;
+  final Set<String> _selectedUIDs = {};
+  bool _isSelecting = false;
+  bool _isRemoving = false;
   late int _onTimeMinutes;
   late int _scanCooldownSeconds;
   late int _timeOutMinimumMinutes;
@@ -1378,6 +1402,7 @@ class _ClassDetailDialogState extends State<_ClassDetailDialog>
     _currentDomains = List<String>.from(widget.cls.allowedEmailDomains);
     _loadStudents();
   }
+
   @override
   void dispose() {
     _tabs.dispose();
@@ -1385,6 +1410,7 @@ class _ClassDetailDialogState extends State<_ClassDetailDialog>
     _domainInputCtrl.dispose();
     super.dispose();
   }
+
   Future<void> _loadStudents() async {
     setState(() => _loadingStudents = true);
     final freshClass = await widget.controller.fetchClassDoc(widget.cls.id);
@@ -1407,6 +1433,7 @@ class _ClassDetailDialogState extends State<_ClassDetailDialog>
       });
     }
   }
+
   Future<void> _enrollByEmail() async {
     setState(() {
       _enrolling = true;
@@ -1430,6 +1457,7 @@ class _ClassDetailDialogState extends State<_ClassDetailDialog>
       });
     }
   }
+
   Future<void> _addDomain() async {
     final raw = _domainInputCtrl.text;
     final validationErr = ClassesController.validateEmailDomain(raw);
@@ -1467,6 +1495,7 @@ class _ClassDetailDialogState extends State<_ClassDetailDialog>
       });
     }
   }
+
   Future<void> _showRemoveDomainDialog(String domain) async {
     final affectedCount = await widget.controller.countStudentsWithDomain(
       classId: widget.cls.id,
@@ -1677,6 +1706,153 @@ class _ClassDetailDialogState extends State<_ClassDetailDialog>
       ),
     );
   }
+
+  Future<void> _showBulkRemoveDialog() async {
+    if (_selectedUIDs.isEmpty) return;
+    final toRemove = _enrolled!
+        .where((s) => _selectedUIDs.contains(s.uid))
+        .toList();
+    final count = toRemove.length;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        icon: HugeIcon(
+          icon: HugeIcons.strokeRoundedUserRemove01,
+          color: const Color(0xFFE53935),
+          size: 32,
+        ),
+        title: Text(
+          'Remove $count Student${count == 1 ? '' : 's'}?',
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: SizedBox(
+          width: 360,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'The following students will be unenrolled from this class. '
+                'Their attendance records will not be deleted.',
+                style: TextStyle(color: Colors.black54, fontSize: 13),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                constraints: const BoxConstraints(maxHeight: 180),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8F8F8),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFEEEEEE)),
+                ),
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  itemCount: toRemove.length,
+                  separatorBuilder: (_, _x) =>
+                      const Divider(height: 1, color: Color(0xFFEEEEEE)),
+                  itemBuilder: (_, i) {
+                    final s = toRemove[i];
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.person_outline_rounded,
+                            size: 14,
+                            color: Colors.black38,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  s.fullName,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                Text(
+                                  s.email,
+                                  style: const TextStyle(
+                                    color: Colors.black38,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+        actionsAlignment: MainAxisAlignment.end,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            style: TextButton.styleFrom(foregroundColor: Colors.black45),
+            child: const Text('Cancel'),
+          ),
+          GestureDetector(
+            onTap: () => Navigator.of(context).pop(true),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE53935),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                'Remove $count Student${count == 1 ? '' : 's'}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _isRemoving = true);
+    final uids = _selectedUIDs.toList();
+    final error = await widget.controller.removeStudents(
+      classId: widget.cls.id,
+      studentUIDs: uids,
+    );
+    if (!mounted) return;
+    setState(() {
+      _isRemoving = false;
+      _isSelecting = false;
+      _selectedUIDs.clear();
+    });
+    if (error == null) {
+      await _loadStudents();
+      if (!mounted) return;
+      widget.onToast(
+        title: 'Removed',
+        message:
+            '$count student${count == 1 ? '' : 's'} removed from the class.',
+      );
+    } else {
+      widget.onToast(title: 'Error', message: error, isError: true);
+    }
+  }
+
   Future<void> _saveSettings() async {
     setState(() {
       _savingSettings = true;
@@ -1702,6 +1878,7 @@ class _ClassDetailDialogState extends State<_ClassDetailDialog>
       });
     }
   }
+
   @override
   Widget build(BuildContext context) {
     return Dialog(
@@ -1785,6 +1962,7 @@ class _ClassDetailDialogState extends State<_ClassDetailDialog>
       ),
     );
   }
+
   Widget _buildStudentsTab() {
     if (_loadingStudents) {
       return const Center(
@@ -1945,8 +2123,146 @@ class _ClassDetailDialogState extends State<_ClassDetailDialog>
                 ),
               ),
             ),
+            const Spacer(),
+            if ((_enrolled?.isNotEmpty ?? false)) ...[
+              if (_isSelecting && _selectedUIDs.isNotEmpty)
+                GestureDetector(
+                  onTap: _isRemoving ? null : _showBulkRemoveDialog,
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: AnimatedOpacity(
+                      duration: const Duration(milliseconds: 150),
+                      opacity: _isRemoving ? 0.5 : 1.0,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFEBEE),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: const Color(
+                              0xFFE53935,
+                            ).withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (_isRemoving)
+                              const SizedBox(
+                                width: 12,
+                                height: 12,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Color(0xFFE53935),
+                                ),
+                              )
+                            else
+                              HugeIcon(
+                                icon: HugeIcons.strokeRoundedUserRemove01,
+                                color: const Color(0xFFE53935),
+                                size: 12,
+                              ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Remove (${_selectedUIDs.length})',
+                              style: const TextStyle(
+                                color: Color(0xFFE53935),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              if (_isSelecting && _selectedUIDs.isNotEmpty)
+                const SizedBox(width: 6),
+              GestureDetector(
+                onTap: () => setState(() {
+                  _isSelecting = !_isSelecting;
+                  _selectedUIDs.clear();
+                }),
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _isSelecting
+                          ? const Color(0xFFF5F5F5)
+                          : const Color(0xFFAEEA00).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: _isSelecting
+                            ? const Color(0xFFE0E0E0)
+                            : const Color(0xFFAEEA00).withValues(alpha: 0.4),
+                      ),
+                    ),
+                    child: Text(
+                      _isSelecting ? 'Cancel' : 'Select',
+                      style: TextStyle(
+                        color: _isSelecting
+                            ? Colors.black54
+                            : const Color(0xFF5A8A00),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
+        if (_isSelecting && (_enrolled?.isNotEmpty ?? false)) ...[
+          const SizedBox(height: 6),
+          GestureDetector(
+            onTap: () => setState(() {
+              if (_selectedUIDs.length == _enrolled!.length) {
+                _selectedUIDs.clear();
+              } else {
+                _selectedUIDs.addAll(_enrolled!.map((s) => s.uid));
+              }
+            }),
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: Row(
+                children: [
+                  Checkbox(
+                    value:
+                        _selectedUIDs.length == _enrolled!.length &&
+                        _enrolled!.isNotEmpty,
+                    tristate: false,
+                    onChanged: (_) => setState(() {
+                      if (_selectedUIDs.length == _enrolled!.length) {
+                        _selectedUIDs.clear();
+                      } else {
+                        _selectedUIDs.addAll(_enrolled!.map((s) => s.uid));
+                      }
+                    }),
+                    activeColor: const Color(0xFFE53935),
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    _selectedUIDs.length == _enrolled!.length
+                        ? 'Deselect all'
+                        : 'Select all (${_enrolled!.length})',
+                    style: const TextStyle(color: Colors.black45, fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
         const SizedBox(height: 8),
         if (_enrolled == null || _enrolled!.isEmpty)
           const Text(
@@ -1958,6 +2274,7 @@ class _ClassDetailDialogState extends State<_ClassDetailDialog>
       ],
     );
   }
+
   Widget _pendingRow(EnrolledStudent s) {
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
@@ -2066,73 +2383,113 @@ class _ClassDetailDialogState extends State<_ClassDetailDialog>
       ),
     );
   }
+
   Widget _enrolledRow(EnrolledStudent s) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8F8F8),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFEEEEEE)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  s.fullName,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
-                ),
-                Text(
-                  s.email,
-                  style: const TextStyle(color: Colors.black45, fontSize: 11),
-                ),
-              ],
-            ),
-          ),
-          GestureDetector(
-            onTap: () async {
-              final error = await widget.controller.removeStudent(
-                classId: widget.cls.id,
-                studentUID: s.uid,
-              );
-              if (!mounted) return;
-              if (error == null) {
-                await _loadStudents();
-                if (!mounted) return;
-                widget.onToast(
-                  title: 'Removed',
-                  message: '${s.fullName} has been removed.',
-                );
+    final isSelected = _selectedUIDs.contains(s.uid);
+    return GestureDetector(
+      onTap: _isSelecting
+          ? () => setState(() {
+              if (isSelected) {
+                _selectedUIDs.remove(s.uid);
               } else {
-                widget.onToast(title: 'Error', message: error, isError: true);
+                _selectedUIDs.add(s.uid);
               }
-            },
-            child: MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: Container(
-                padding: const EdgeInsets.all(5),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFEBEE),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: HugeIcon(
-                  icon: HugeIcons.strokeRoundedUserRemove01,
-                  color: const Color(0xFFE53935),
-                  size: 14,
-                ),
+            })
+          : null,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        margin: const EdgeInsets.only(bottom: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFFFEBEE) : const Color(0xFFF8F8F8),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected
+                ? const Color(0xFFE53935).withValues(alpha: 0.4)
+                : const Color(0xFFEEEEEE),
+          ),
+        ),
+        child: Row(
+          children: [
+            if (_isSelecting) ...[
+              Checkbox(
+                value: isSelected,
+                onChanged: (_) => setState(() {
+                  if (isSelected) {
+                    _selectedUIDs.remove(s.uid);
+                  } else {
+                    _selectedUIDs.add(s.uid);
+                  }
+                }),
+                activeColor: const Color(0xFFE53935),
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                visualDensity: VisualDensity.compact,
+              ),
+              const SizedBox(width: 4),
+            ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    s.fullName,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
+                  Text(
+                    s.email,
+                    style: const TextStyle(color: Colors.black45, fontSize: 11),
+                  ),
+                ],
               ),
             ),
-          ),
-        ],
+            if (!_isSelecting)
+              GestureDetector(
+                onTap: () async {
+                  final error = await widget.controller.removeStudent(
+                    classId: widget.cls.id,
+                    studentUID: s.uid,
+                  );
+                  if (!mounted) return;
+                  if (error == null) {
+                    await _loadStudents();
+                    if (!mounted) return;
+                    widget.onToast(
+                      title: 'Removed',
+                      message: '${s.fullName} has been removed.',
+                    );
+                  } else {
+                    widget.onToast(
+                      title: 'Error',
+                      message: error,
+                      isError: true,
+                    );
+                  }
+                },
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: Container(
+                    padding: const EdgeInsets.all(5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFEBEE),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: HugeIcon(
+                      icon: HugeIcons.strokeRoundedUserRemove01,
+                      color: const Color(0xFFE53935),
+                      size: 14,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
+
   Widget _buildSettingsTab() {
     return ListView(
       padding: const EdgeInsets.all(20),
@@ -2285,6 +2642,7 @@ class _ClassDetailDialogState extends State<_ClassDetailDialog>
     );
   }
 }
+
 class _MinutePicker extends StatelessWidget {
   final String label;
   final String sublabel;
@@ -2399,6 +2757,7 @@ class _MinutePicker extends StatelessWidget {
     );
   }
 }
+
 class _LocationValidationToggle extends StatelessWidget {
   final bool value;
   final int proximityThreshold;
@@ -2527,6 +2886,7 @@ class _LocationValidationToggle extends StatelessWidget {
     );
   }
 }
+
 class _MeterPicker extends StatelessWidget {
   final String label;
   final String sublabel;
@@ -2641,6 +3001,7 @@ class _MeterPicker extends StatelessWidget {
     );
   }
 }
+
 class _SecondPicker extends StatelessWidget {
   final String label;
   final String sublabel;
@@ -2755,4 +3116,3 @@ class _SecondPicker extends StatelessWidget {
     );
   }
 }
-

@@ -368,7 +368,7 @@ class KioskController extends ChangeNotifier {
             title: 'Device Already Used',
             message:
                 'This device has already been used to scan a QR code'
-                'in this session.',
+                'in    this session.',
             isError: true,
           ),
         );
@@ -849,3 +849,4 @@ class KioskController extends ChangeNotifier {
     super.dispose();
   }
 }
+
