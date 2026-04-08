@@ -1,5 +1,5 @@
 ![s0](./screenshots/0.png)
-# 📋 𝐂𝐋𝐀𝐒𝐒𝐒𝐂𝐀𝐍
+# 𖣯 𝗖𝗹𝗮𝘀𝘀𝗦𝗰𝗮𝗻
 ### *Effortless Attendance, Empowered Education.*
 
 [![Developed by SoliDeoCode](https://img.shields.io/badge/Developed%20by-SoliDeoCode-AEEA00.svg?style=for-the-badge&logoColor=black)](https://github.com/DanRyuzaki)
