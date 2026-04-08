@@ -1,5 +1,4 @@
 ![s0](./screenshots/0.png)
-
 # 📋 𝐂𝐋𝐀𝐒𝐒𝐒𝐂𝐀𝐍
 ### *Effortless Attendance, Empowered Education.*
 
