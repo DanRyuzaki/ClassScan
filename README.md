@@ -11,7 +11,7 @@
 
 ---
 
-**CLASSSCAN** is a Flutter Web-based QR attendance system built as a Progressive Web Application (PWA+SPA) for classroom use in schools. Developed as part of a STEM capstone research paper at Our Lady of Fatima University — Quezon City Campus (A.Y. 2025–2026), ClassScan digitizes classroom attendance, eliminates manual errors, and enforces a four-layer anti-proxy system to prevent fraudulent check-ins. All system development and implementation were carried out by a single contributor — **SoliDeoCode**.
+**CLASSSCAN** is an SPA-PWA Web-based QR attendance system built as a Progressive Web Application (PWA+SPA) for classroom use in schools. Developed as part of a STEM capstone research paper at Our Lady of Fatima University — Quezon City Campus (A.Y. 2025–2026), ClassScan digitizes classroom attendance, eliminates manual errors, and enforces a four-layer anti-proxy system to prevent fraudulent check-ins. All system development and implementation were carried out by a single contributor — **SoliDeoCode**.
 
 ### ✦ Key Features
 - **Teacher Portal** — Manage classes, enroll students, configure attendance rules, and monitor sessions live from a dedicated dashboard
